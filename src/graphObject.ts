@@ -7,7 +7,7 @@ export abstract class GraphObject<P extends object = any> {
 
     private _categories = new Set<GraphCategory>();
     private _properties = new Map<keyof P, P[keyof P]>();
-    private observers = new Map<GraphObjectSubscription, GraphObjectEvents>();
+    private _observers = new Map<GraphObjectSubscription, GraphObjectEvents>();
 
     constructor(owner: Graph<P>, category?: GraphCategory) {
         this.owner = owner;
@@ -19,8 +19,8 @@ export abstract class GraphObject<P extends object = any> {
     public get propertyCount() { return this._properties.size; }
 
     public subscribe(events: GraphObjectEvents<P>) {
-        const subscription: GraphObjectSubscription = { unsubscribe: () => { this.observers.delete(subscription); } };
-        this.observers.set(subscription, events);
+        const subscription: GraphObjectSubscription = { unsubscribe: () => { this._observers.delete(subscription); } };
+        this._observers.set(subscription, { ...events });
         return subscription;
     }
 
@@ -37,7 +37,7 @@ export abstract class GraphObject<P extends object = any> {
         return false;
     }
 
-    public hasCategoryInSet(categorySet: Set<GraphCategory>, match: "exact" | "inherited") {
+    public hasCategoryInSet(categorySet: ReadonlySet<GraphCategory>, match: "exact" | "inherited") {
         if (match === "inherited") {
             const inherited = new Set<GraphCategory>();
             for (let category of categorySet) {
@@ -123,11 +123,11 @@ export abstract class GraphObject<P extends object = any> {
     }
 
     protected raiseOnCategoryChanged(change: "add" | "delete", category: GraphCategory) {
-        for (const { onCategoryChanged } of this.observers.values()) if (onCategoryChanged) onCategoryChanged(change, category);
+        for (const { onCategoryChanged } of this._observers.values()) if (onCategoryChanged) onCategoryChanged(change, category);
     }
 
     protected raiseOnPropertyChanged(name: keyof P) {
-        for (const { onPropertyChanged } of this.observers.values()) if (onPropertyChanged) onPropertyChanged(name);
+        for (const { onPropertyChanged } of this._observers.values()) if (onPropertyChanged) onPropertyChanged(name);
     }
 }
 

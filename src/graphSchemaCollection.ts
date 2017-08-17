@@ -18,7 +18,7 @@ export class GraphSchemaCollection<P extends object = any> {
 
     public subscribe(events: GraphSchemaCollectionEvents) {
         const subscription: GraphSchemaCollectionSubscription = { unsubscribe: () => { this.observers.delete(subscription); } };
-        this.observers.set(subscription, events);
+        this.observers.set(subscription, { ...events });
         return subscription;
     }
 

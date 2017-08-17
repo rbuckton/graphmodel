@@ -19,7 +19,7 @@ export class GraphCategoryCollection<P extends object = any> {
 
     public subscribe(events: GraphCategoryCollectionEvents) {
         const subscription: GraphCategoryCollectionSubscription = { unsubscribe: () => { this.observers.delete(subscription); } };
-        this.observers.set(subscription, events);
+        this.observers.set(subscription, { ...events });
         return subscription;
     }
 

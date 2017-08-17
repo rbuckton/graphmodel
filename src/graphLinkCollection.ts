@@ -22,7 +22,7 @@ export class GraphLinkCollection<P extends object = any> {
 
     public subscribe(events: GraphLinkCollectionEvents<P>) {
         const subscription: GraphLinkCollectionSubscription = { unsubscribe: () => { this.observers.delete(subscription); } };
-        this.observers.set(subscription, events);
+        this.observers.set(subscription, { ...events });
         return subscription;
     }
 

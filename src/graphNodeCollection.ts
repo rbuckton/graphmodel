@@ -21,7 +21,7 @@ export class GraphNodeCollection<P extends object = any> {
 
     public subscribe(events: GraphNodeCollectionEvents<P>) {
         const subscription: GraphNodeCollectionSubscription = { unsubscribe: () => { this.observers.delete(subscription); } };
-        this.observers.set(subscription, events);
+        this.observers.set(subscription, { ...events });
         return subscription;
     }
 
