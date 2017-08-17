@@ -1,8 +1,9 @@
 {
   "name": "graphmodel",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "JavaScript library for modeling directed graphs",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
   },
   "repository": {
