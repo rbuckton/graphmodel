@@ -110,14 +110,17 @@ export declare class Graph<P extends object = any> {
 export declare class GraphSchema<P extends object = any> {
     constructor(name: string, ...schemas: GraphSchema<P>[]);
     readonly graph: Graph<P> | undefined;
-    readonly categories: GraphCategoryCollection<P>;
     readonly schemas: GraphSchemaCollection<P>;
+    readonly categories: GraphCategoryCollection<P>;
+    readonly properties: GraphPropertyCollection<P>;
     readonly name: string;
     hasSchema(schema: GraphSchema<P>): boolean;
     addSchema(schema: GraphSchema<P>): this;
     allSchemas(): IterableIterator<GraphSchema<P>>;
-    getCategory(id: string): GraphCategory | undefined;
-    allCategories(...categoryIds: string[]): IterableIterator<GraphCategory>;
+    findCategory(id: string): GraphCategory | undefined;
+    findCategories(...categoryIds: string[]): IterableIterator<GraphCategory>;
+    findProperty<K extends keyof P>(id: K): GraphProperty<K, P[K]> | undefined;
+    findProperties<K extends keyof P>(...propertyIds: K[]): IterableIterator<GraphProperty<K, P[K]>>;
 }
 ```
 
@@ -181,6 +184,41 @@ export interface GraphCategoryCollectionSubscription {
 }
 ```
 
+### GraphProperty
+```ts
+export declare class GraphProperty<K extends string = string, T = any> {
+    private constructor();
+    readonly id: K;
+}
+```
+
+### GraphPropertyCollection
+```ts
+export declare class GraphPropertyCollection<P extends object = any> {
+    private constructor();
+    readonly schema: GraphSchema<P>;
+    readonly size: number;
+    subscribe(events: GraphPropertyCollectionEvents<P>): GraphPropertyCollectionSubscription;
+    has(property: GraphProperty): boolean;
+    get<K extends keyof P>(id: K): GraphProperty<K, P[K]> | undefined;
+    getOrCreate<K extends keyof P>(id: K): GraphProperty<K, P[K]>;
+    add<K extends keyof P>(property: GraphProperty<K, P[K]>): this;
+    delete(property: GraphProperty): boolean;
+    clear(): void;
+    values(): IterableIterator<GraphProperty<keyof P, P[keyof P]>>;
+    [Symbol.iterator](): IterableIterator<GraphProperty<keyof P, P[keyof P]>>;
+}
+
+export interface GraphPropertyCollectionEvents<P extends object = any> {
+    onAdded?: (category: GraphProperty<keyof P, P[keyof P]>) => void;
+    onDeleted?: (category: GraphProperty<keyof P, P[keyof P]>) => void;
+}
+
+export interface GraphPropertyCollectionSubscription {
+    unsubscribe(): void;
+}
+```
+
 ### GraphObject
 ```ts
 export declare abstract class GraphObject<P extends object = any> {
@@ -193,15 +231,15 @@ export declare abstract class GraphObject<P extends object = any> {
     hasCategoryInSet(categorySet: Set<GraphCategory>, match: "exact" | "inherited"): boolean;
     addCategory(category: GraphCategory): this;
     deleteCategory(category: GraphCategory): boolean;
-    has(key: keyof P): boolean;
-    get<K extends keyof P>(key: K): P[K] | undefined;
-    set<K extends keyof P>(key: K, value: P[K]): this;
-    delete(key: keyof P): boolean;
-    keys(): IterableIterator<keyof P>;
+    has<K extends keyof P>(key: K | GraphProperty<K, P[K]>): boolean;
+    get<K extends keyof P>(key: K | GraphProperty<K, P[K]>): P[K] | undefined;
+    set<K extends keyof P>(key: K | GraphProperty<K, P[K]>, value: P[K]): this;
+    delete<K extends keyof P>(key: K | GraphProperty<K, P[K]>): boolean;
+    keys(): IterableIterator<GraphProperty<keyof P, P[keyof P]>>;
     values(): IterableIterator<P[keyof P]>;
-    entries(): IterableIterator<[keyof P, P[keyof P]]>;
+    entries(): IterableIterator<[GraphProperty<keyof P, P[keyof P]>, P[keyof P]]>;
     categories(): IterableIterator<GraphCategory>;
-    [Symbol.iterator](): IterableIterator<[keyof P, P[keyof P]]>;
+    [Symbol.iterator](): IterableIterator<[GraphProperty<keyof P, P[keyof P]>, P[keyof P]]>;
 }
 
 export interface GraphObjectEvents<P extends object = any> {
@@ -251,7 +289,7 @@ export declare class GraphNodeCollection<P extends object = any> {
     delete(node: GraphNode<P>): boolean;
     clear(): void;
     values(): IterableIterator<GraphNode<P>>;
-    byProperty<K extends keyof P>(key: K, value: P[K]): IterableIterator<GraphNode<P>>;
+    byProperty<K extends keyof P>(key: K | GraphProperty<K, P[K]>, value: P[K]): IterableIterator<GraphNode<P>>;
     byCategory(...categories: GraphCategory[]): IterableIterator<GraphNode<P>>;
     filter(cb: (node: GraphNode<P>) => boolean): IterableIterator<GraphNode<P>>;
     [Symbol.iterator](): IterableIterator<GraphNode<P>>;
@@ -302,7 +340,7 @@ export declare class GraphLinkCollection<P extends object = any> {
     between(source: GraphNode<P>, target: GraphNode<P>): IterableIterator<GraphLink<P>>;
     to(node: string | GraphNode<P>, ...categories: GraphCategory[]): IterableIterator<GraphLink<P>>;
     from(node: string | GraphNode<P>, ...categories: GraphCategory[]): IterableIterator<GraphLink<P>>;
-    byProperty<K extends keyof P>(key: K, value: P[K]): IterableIterator<GraphLink<P>>;
+    byProperty<K extends keyof P>(key: K | GraphProperty<K, P[K]>, value: P[K]): IterableIterator<GraphLink<P>>;
     byCategory(...categories: GraphCategory[]): IterableIterator<GraphLink<P>>;
     filter(cb: (link: GraphLink<P>) => boolean): IterableIterator<GraphLink<P>>;
     [Symbol.iterator](): IterableIterator<GraphLink<P>>;

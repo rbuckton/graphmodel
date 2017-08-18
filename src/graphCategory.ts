@@ -3,7 +3,7 @@ export class GraphCategory {
 
     private _basedOn: GraphCategory;
 
-    /*@internal*/ static create(id: string) {
+    /*@internal*/ static _create(id: string) {
         return new GraphCategory(id);
     }
 

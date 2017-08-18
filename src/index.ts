@@ -1,5 +1,7 @@
 export { GraphCategory } from "./graphCategory";
 export { GraphCategoryCollection, GraphCategoryCollectionEvents, GraphCategoryCollectionSubscription } from "./graphCategoryCollection";
+export { GraphProperty } from "./graphProperty";
+export { GraphPropertyCollection, GraphPropertyCollectionEvents, GraphPropertyCollectionSubscription } from "./graphPropertyCollection";
 export { GraphSchema } from "./graphSchema";
 export { GraphSchemaCollection, GraphSchemaCollectionEvents, GraphSchemaCollectionSubscription } from "./graphSchemaCollection";
 export { GraphObject, GraphObjectEvents, GraphObjectSubscription } from "./graphObject";

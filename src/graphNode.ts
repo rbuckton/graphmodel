@@ -20,7 +20,7 @@ export class GraphNode<P extends object = any> extends GraphObject<P> {
         this.outgoingLinks = this._outgoingLinks;
     }
 
-    /*@internal*/ static create<P extends object>(owner: Graph<P>, id: string, category?: GraphCategory) {
+    /*@internal*/ static _create<P extends object>(owner: Graph<P>, id: string, category?: GraphCategory) {
         return new GraphNode(owner, id, category);
     }
 
@@ -74,18 +74,18 @@ export class GraphNode<P extends object = any> extends GraphObject<P> {
 
     public copy(newId: string) {
         const node = new GraphNode(this.owner, newId);
-        node.merge(this);
-        for (const link of this.outgoingLinks) GraphLink.create(this.owner, node, link.target, link.index).merge(link);
-        for (const link of this.incomingLinks) GraphLink.create(this.owner, link.source, node, link.index).merge(link);
+        node._merge(this);
+        for (const link of this.outgoingLinks) GraphLink._create(this.owner, node, link.target, link.index)._merge(link);
+        for (const link of this.incomingLinks) GraphLink._create(this.owner, link.source, node, link.index)._merge(link);
         return node;
     }
 
-    /*@internal*/ addLink(link: GraphLink<P>) {
+    /*@internal*/ _addLink(link: GraphLink<P>) {
         if (link.target === this) this._incomingLinks.add(link);
         if (link.source === this) this._outgoingLinks.add(link);
     }
 
-    /*@internal*/ removeLink(link: GraphLink<P>) {
+    /*@internal*/ _removeLink(link: GraphLink<P>) {
         if (link.target === this) this._incomingLinks.delete(link);
         if (link.source === this) this._outgoingLinks.delete(link);
     }

@@ -2,12 +2,15 @@ import { GraphSchemaCollection } from "./graphSchemaCollection";
 import { GraphCategory } from "./graphCategory";
 import { GraphCategoryCollection } from "./graphCategoryCollection";
 import { Graph } from "./graph";
+import { GraphPropertyCollection } from "./graphPropertyCollection";
+import { GraphProperty } from "./graphProperty";
 
 export class GraphSchema<P extends object = any> {
     public readonly ["[[Properties]]"]: P;
     public readonly graph: Graph<P> | undefined;
-    public readonly categories: GraphCategoryCollection<P> = GraphCategoryCollection.create(this);
-    public readonly schemas: GraphSchemaCollection<P> = GraphSchemaCollection.create(this);
+    public readonly schemas: GraphSchemaCollection<P> = GraphSchemaCollection._create(this);
+    public readonly categories: GraphCategoryCollection<P> = GraphCategoryCollection._create(this);
+    public readonly properties: GraphPropertyCollection<P> = GraphPropertyCollection._create(this);
     public readonly name: string;
 
     constructor(name: string, ...schemas: GraphSchema<P>[]) {
@@ -33,17 +36,31 @@ export class GraphSchema<P extends object = any> {
         }
     }
 
-    public getCategory(id: string) {
+    public findCategory(id: string) {
         for (const schema of this.allSchemas()) {
-            const category = schema.categories.get(id);
-            return category;
+            const category = schema.categories._get(id);
+            if (category) return category;
         }
         return undefined;
     }
 
-    public * allCategories(...categoryIds: string[]) {
+    public * findCategories(...categoryIds: string[]) {
         for (const schema of this.allSchemas()) {
             yield* schema.categories.values(categoryIds);
+        }
+    }
+
+    public findProperty<K extends keyof P>(id: K) {
+        for (const schema of this.allSchemas()) {
+            const property = schema.properties.get(id);
+            if (property) return property;
+        }
+        return undefined;
+    }
+
+    public * findProperties<K extends keyof P>(...propertyIds: K[]) {
+        for (const schema of this.allSchemas()) {
+            yield* schema.properties.values(propertyIds);
         }
     }
 }

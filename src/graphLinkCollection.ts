@@ -1,5 +1,6 @@
 import { GraphSchema } from "./graphSchema";
 import { GraphCategory } from "./graphCategory";
+import { GraphProperty } from "./graphProperty";
 import { GraphLink } from "./graphLink";
 import { GraphNode } from "./graphNode";
 import { Graph } from "./graph";
@@ -7,10 +8,10 @@ import { Graph } from "./graph";
 export class GraphLinkCollection<P extends object = any> {
     public readonly graph: Graph<P>;
 
-    private readonly links = new Map<string, GraphLink<P>>();
-    private readonly observers = new Map<GraphLinkCollectionSubscription, GraphLinkCollectionEvents<P>>();
+    private readonly _links = new Map<string, GraphLink<P>>();
+    private readonly _observers = new Map<GraphLinkCollectionSubscription, GraphLinkCollectionEvents<P>>();
 
-    /*@internal*/ static create<P extends object>(graph: Graph<P>) {
+    /*@internal*/ static _create<P extends object>(graph: Graph<P>) {
         return new GraphLinkCollection(graph);
     }
 
@@ -18,22 +19,22 @@ export class GraphLinkCollection<P extends object = any> {
         this.graph = graph;
     }
 
-    public get size() { return this.links.size; }
+    public get size() { return this._links.size; }
 
     public subscribe(events: GraphLinkCollectionEvents<P>) {
-        const subscription: GraphLinkCollectionSubscription = { unsubscribe: () => { this.observers.delete(subscription); } };
-        this.observers.set(subscription, { ...events });
+        const subscription: GraphLinkCollectionSubscription = { unsubscribe: () => { this._observers.delete(subscription); } };
+        this._observers.set(subscription, { ...events });
         return subscription;
     }
 
     public has(link: GraphLink<P>) {
         const key = linkId(link.source.id, link.target.id, link.index);
-        return this.links.has(key);
+        return this._links.get(key) === link;
     }
 
     public get(sourceId: string, targetId: string, index = 0) {
         const key = linkId(sourceId, targetId, index);
-        return this.links.get(key);
+        return this._links.get(key);
     }
 
     public getOrCreate(source: string | GraphNode<P>, target: string | GraphNode<P>, index?: number): GraphLink<P>;
@@ -47,7 +48,7 @@ export class GraphLinkCollection<P extends object = any> {
         if (!link) {
             const source = this.graph.nodes.getOrCreate(sourceId);
             const target = this.graph.nodes.getOrCreate(targetId);
-            link = GraphLink.create(this.graph, source, target, index, category);
+            link = GraphLink._create(this.graph, source, target, index, category);
             this.add(link);
         }
         else if (category) {
@@ -59,19 +60,19 @@ export class GraphLinkCollection<P extends object = any> {
 
     public add(link: GraphLink<P>) {
         const key = linkId(link.source.id, link.target.id, link.index);
-        const ownLink = this.links.get(key);
+        const ownLink = this._links.get(key);
         if (ownLink) {
             if (ownLink !== link) {
-                ownLink.merge(link);
+                ownLink._merge(link);
             }
         }
         else if (this.graph.importLink(link) === link) {
-            this.links.set(key, link);
-            link.source.addLink(link);
-            link.target.addLink(link);
+            this._links.set(key, link);
+            link.source._addLink(link);
+            link.target._addLink(link);
             this.graph.nodes.add(link.source);
             this.graph.nodes.add(link.target);
-            this.raiseOnAdded(link);
+            this._raiseOnAdded(link);
         }
 
         return this;
@@ -93,7 +94,7 @@ export class GraphLinkCollection<P extends object = any> {
         }
 
         const key = linkId(sourceId, targetId!, index);
-        const ownLink = this.links.get(key);
+        const ownLink = this._links.get(key);
         if (ownLink) {
             let remove: boolean;
             if (category !== undefined) {
@@ -104,10 +105,10 @@ export class GraphLinkCollection<P extends object = any> {
                 remove = true;
             }
             if (remove) {
-                this.links.delete(key);
-                ownLink.source.removeLink(ownLink);
-                ownLink.target.removeLink(ownLink);
-                this.raiseOnDeleted(ownLink);
+                this._links.delete(key);
+                ownLink.source._removeLink(ownLink);
+                ownLink.target._removeLink(ownLink);
+                this._raiseOnDeleted(ownLink);
                 return typeof linkOrSourceId === "string" ? ownLink : true;
             }
         }
@@ -117,19 +118,19 @@ export class GraphLinkCollection<P extends object = any> {
 
     public clear() {
         for (const ownLink of this) {
-            ownLink.source.removeLink(ownLink);
-            ownLink.target.removeLink(ownLink);
+            ownLink.source._removeLink(ownLink);
+            ownLink.target._removeLink(ownLink);
         }
 
-        this.links.clear();
+        this._links.clear();
     }
 
     public values() {
-        return this.links.values();
+        return this._links.values();
     }
 
     public [Symbol.iterator]() {
-        return this.links.values();
+        return this._links.values();
     }
 
     public * between(source: GraphNode<P>, target: GraphNode<P>) {
@@ -159,7 +160,7 @@ export class GraphLinkCollection<P extends object = any> {
         if (source) for (const outgoing of source.outgoingLinks) if (!set || outgoing.hasCategoryInSet(set, "exact")) yield outgoing;
     }
 
-    public * byProperty<K extends keyof P>(key: K, value: P[K]) {
+    public * byProperty<K extends keyof P>(key: K | GraphProperty<K, P[K]>, value: P[K]) {
         for (const link of this) if (link.get(key) === value) yield link;
     }
 
@@ -172,16 +173,12 @@ export class GraphLinkCollection<P extends object = any> {
         for (const link of this) if (cb(link)) yield link;
     }
 
-    private raiseOnAdded(link: GraphLink<P>) {
-        for (const { onAdded } of this.observers.values()) {
-            if (onAdded) onAdded(link);
-        }
+    private _raiseOnAdded(link: GraphLink<P>) {
+        for (const { onAdded } of this._observers.values()) if (onAdded) onAdded(link);
     }
 
-    private raiseOnDeleted(link: GraphLink<P>) {
-        for (const { onDeleted } of this.observers.values()) {
-            if (onDeleted) onDeleted(link);
-        }
+    private _raiseOnDeleted(link: GraphLink<P>) {
+        for (const { onDeleted } of this._observers.values()) if (onDeleted) onDeleted(link);
     }
 }
 

@@ -1,12 +1,13 @@
 import { GraphSchema } from "./graphSchema";
 import { GraphCategory } from "./graphCategory";
+import { GraphProperty } from "./graphProperty";
 import { Graph } from "./graph";
 
 export abstract class GraphObject<P extends object = any> {
     public readonly owner: Graph<P>;
 
     private _categories = new Set<GraphCategory>();
-    private _properties = new Map<keyof P, P[keyof P]>();
+    private _properties = new Map<GraphProperty<keyof P, P[keyof P]>, P[keyof P]>();
     private _observers = new Map<GraphObjectSubscription, GraphObjectEvents>();
 
     constructor(owner: Graph<P>, category?: GraphCategory) {
@@ -62,36 +63,47 @@ export abstract class GraphObject<P extends object = any> {
     public addCategory(category: GraphCategory) {
         if (!this._categories.has(category)) {
             this._categories.add(category);
-            this.raiseOnCategoryChanged("add", category);
+            this._raiseOnCategoryChanged("add", category);
         }
         return this;
     }
 
     public deleteCategory(category: GraphCategory) {
         if (this._categories.delete(category)) {
-            this.raiseOnCategoryChanged("delete", category);
+            this._raiseOnCategoryChanged("delete", category);
             return true;
         }
         return false;
     }
 
-    public has(key: keyof P) {
-        return this._properties.has(key);
+    public has<K extends keyof P>(key: K | GraphProperty<K, P[K]>) {
+        const property = typeof key === "string" ? this.owner.schema.findProperty(key) : key;
+        return property !== undefined && this._properties.has(property);
     }
 
-    public get<K extends keyof P>(key: K): P[K] | undefined {
-        return this._properties.get(key);
+    public get<K extends keyof P>(key: K | GraphProperty<K, P[K]>): P[K] | undefined {
+        const property = typeof key === "string" ? this.owner.schema.findProperty(key) : key;
+        return property && this._properties.get(property);
     }
 
-    public set<K extends keyof P>(key: K, value: P[K]) {
-        this._properties.set(key, value);
-        this.raiseOnPropertyChanged(key);
+    public set<K extends keyof P>(key: K | GraphProperty<K, P[K]>, value: P[K]) {
+        if (value === undefined || value === null) {
+            this.delete(key);
+            return this;
+        }
+
+        const property = typeof key === "string" ? this.owner.schema.findProperty(key) : key;
+        if (property) {
+            this._properties.set(property, value);
+            this._raiseOnPropertyChanged(property);
+        }
         return this;
     }
 
-    public delete(key: keyof P) {
-        if (this._properties.delete(key)) {
-            this.raiseOnPropertyChanged(key);
+    public delete<K extends keyof P>(key: K | GraphProperty<K, P[K]>) {
+        const property = typeof key === "string" ? this.owner.schema.findProperty(key) : key;
+        if (property && this._properties.delete(property)) {
+            this._raiseOnPropertyChanged(property);
             return false;
         }
         return true;
@@ -117,17 +129,17 @@ export abstract class GraphObject<P extends object = any> {
         return this._properties[Symbol.iterator]();
     }
 
-    /*@internal*/ merge(other: this) {
+    /*@internal*/ _merge(other: this) {
         for (const category of other.categories()) this.addCategory(category);
         for (const [key, value] of other) this.set(key, value);
     }
 
-    protected raiseOnCategoryChanged(change: "add" | "delete", category: GraphCategory) {
+    /*@internal*/ _raiseOnCategoryChanged(change: "add" | "delete", category: GraphCategory) {
         for (const { onCategoryChanged } of this._observers.values()) if (onCategoryChanged) onCategoryChanged(change, category);
     }
 
-    protected raiseOnPropertyChanged(name: keyof P) {
-        for (const { onPropertyChanged } of this._observers.values()) if (onPropertyChanged) onPropertyChanged(name);
+    /*@internal*/ _raiseOnPropertyChanged(property: GraphProperty<keyof P, P[keyof P]>) {
+        for (const { onPropertyChanged } of this._observers.values()) if (onPropertyChanged) onPropertyChanged(property.id);
     }
 }
 

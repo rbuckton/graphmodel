@@ -14,8 +14,8 @@ class DocumentSchema<P extends object> extends GraphSchema<P> {
 }
 
 export class Graph<P extends object = any> {
-    public readonly links: GraphLinkCollection<P> = GraphLinkCollection.create(this);
-    public readonly nodes: GraphNodeCollection<P> = GraphNodeCollection.create(this);
+    public readonly links: GraphLinkCollection<P> = GraphLinkCollection._create(this);
+    public readonly nodes: GraphNodeCollection<P> = GraphNodeCollection._create(this);
     public readonly schema: GraphSchema<P>;
 
     constructor(...schemas: GraphSchema<P>[]) {
@@ -28,6 +28,12 @@ export class Graph<P extends object = any> {
         for (const category of graph.schema.categories) {
             if (!this.schema.categories.has(category)) {
                 this.schema.categories.add(category);
+                changed = true;
+            }
+        }
+        for (const property of graph.schema.properties) {
+            if (!this.schema.properties.has(property)) {
+                this.schema.properties.add(property);
                 changed = true;
             }
         }
@@ -48,7 +54,7 @@ export class Graph<P extends object = any> {
         const source = this.importNode(link.source, /*excludeSchema*/ true);
         const target = this.importNode(link.target, /*excludeSchema*/ true);
         const imported = this.links.getOrCreate(source, target, link.index);
-        imported.merge(link);
+        imported._merge(link);
         return imported;
     }
 
@@ -58,7 +64,7 @@ export class Graph<P extends object = any> {
         if (node.owner === this) return node;
         if (!excludeSchema) this.importSchemas(node.owner);
         const imported = this.nodes.getOrCreate(node.id);
-        imported.merge(node);
+        imported._merge(node);
         return imported;
     }
 
@@ -75,12 +81,12 @@ export class Graph<P extends object = any> {
             for (const link of node.outgoingLinks) {
                 const target = this.importSubset(link.target, depth - 1, /*excludeSchema*/ true, seen);
                 const importedLink = this.links.getOrCreate(importedNode.id, target.id, link.index);
-                importedLink.merge(link);
+                importedLink._merge(link);
             }
             for (const link of node.incomingLinks) {
                 const source = this.importSubset(link.source, depth - 1, /*excludeSchema*/ true, seen);
                 const importedLink = this.links.getOrCreate(source.id, importedNode.id, link.index);
-                importedLink.merge(link);
+                importedLink._merge(link);
             }
         }
         return importedNode;

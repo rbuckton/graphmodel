@@ -1,15 +1,16 @@
 import { GraphSchema } from "./graphSchema";
 import { GraphCategory } from "./graphCategory";
+import { GraphProperty } from "./graphProperty";
 import { GraphNode } from "./graphNode";
 import { Graph } from "./graph";
 
 export class GraphNodeCollection<P extends object = any> {
     public readonly graph: Graph<P>;
 
-    private readonly nodes = new Map<string, GraphNode<P>>();
-    private readonly observers = new Map<GraphNodeCollectionSubscription, GraphNodeCollectionEvents<P>>();
+    private readonly _nodes = new Map<string, GraphNode<P>>();
+    private readonly _observers = new Map<GraphNodeCollectionSubscription, GraphNodeCollectionEvents<P>>();
 
-    /*@internal*/ static create<P extends object>(graph: Graph<P>) {
+    /*@internal*/ static _create<P extends object>(graph: Graph<P>) {
         return new GraphNodeCollection(graph);
     }
 
@@ -17,26 +18,26 @@ export class GraphNodeCollection<P extends object = any> {
         this.graph = graph;
     }
 
-    public get size() { return this.nodes.size; }
+    public get size() { return this._nodes.size; }
 
     public subscribe(events: GraphNodeCollectionEvents<P>) {
-        const subscription: GraphNodeCollectionSubscription = { unsubscribe: () => { this.observers.delete(subscription); } };
-        this.observers.set(subscription, { ...events });
+        const subscription: GraphNodeCollectionSubscription = { unsubscribe: () => { this._observers.delete(subscription); } };
+        this._observers.set(subscription, { ...events });
         return subscription;
     }
 
     public has(node: GraphNode<P>) {
-        return this.nodes.has(node.id);
+        return this._nodes.get(node.id) === node;
     }
 
     public get(id: string) {
-        return this.nodes.get(id);
+        return this._nodes.get(id);
     }
 
     public getOrCreate(id: string, category?: GraphCategory) {
         let node = this.get(id);
         if (!node) {
-            node = GraphNode.create(this.graph, id, category);
+            node = GraphNode._create(this.graph, id, category);
             this.add(node);
         }
         else if (category) {
@@ -52,10 +53,10 @@ export class GraphNodeCollection<P extends object = any> {
             if (ownNode !== node) throw new Error(`A node with the id '${node.id}' already exists.`);
         }
         else if (this.graph.importNode(node) === node) {
-            this.nodes.set(node.id, node);
+            this._nodes.set(node.id, node);
             for (const link of node.outgoingLinks) this.graph.links.add(link);
             for (const link of node.incomingLinks) this.graph.links.add(link);
-            this.raiseOnAdded(node);
+            this._raiseOnAdded(node);
         }
         return this;
     }
@@ -64,12 +65,12 @@ export class GraphNodeCollection<P extends object = any> {
     public delete(node: GraphNode<P>): boolean;
     public delete(node: string | GraphNode<P>) {
         const nodeId = typeof node === "string" ? node : node.id;
-        const ownNode = this.nodes.get(nodeId);
+        const ownNode = this._nodes.get(nodeId);
         if (ownNode) {
-            this.nodes.delete(nodeId);
+            this._nodes.delete(nodeId);
             for (const link of ownNode.outgoingLinks) this.graph.links.delete(link);
             for (const link of ownNode.incomingLinks) this.graph.links.delete(link);
-            this.raiseOnDeleted(ownNode);
+            this._raiseOnDeleted(ownNode);
             return typeof node === "string" ? ownNode : true;
         }
 
@@ -82,18 +83,18 @@ export class GraphNodeCollection<P extends object = any> {
             for (const link of ownNode.incomingLinks) this.graph.links.delete(link);
         }
 
-        this.nodes.clear();
+        this._nodes.clear();
     }
 
     public values() {
-        return this.nodes.values();
+        return this._nodes.values();
     }
 
     public [Symbol.iterator]() {
-        return this.nodes.values();
+        return this._nodes.values();
     }
 
-    public * byProperty<K extends keyof P>(key: K, value: P[K]) {
+    public * byProperty<K extends keyof P>(key: K | GraphProperty<K, P[K]>, value: P[K]) {
         for (const node of this) if (node.get(key) === value) yield node;
     }
 
@@ -106,16 +107,12 @@ export class GraphNodeCollection<P extends object = any> {
         for (const node of this) if (cb(node)) yield node;
     }
 
-    private raiseOnAdded(node: GraphNode<P>) {
-        for (const events of this.observers.values()) {
-            if (events.onAdded) events.onAdded(node);
-        }
+    private _raiseOnAdded(node: GraphNode<P>) {
+        for (const { onAdded } of this._observers.values()) if (onAdded) onAdded(node);
     }
 
-    private raiseOnDeleted(node: GraphNode<P>) {
-        for (const events of this.observers.values()) {
-            if (events.onDeleted) events.onDeleted(node);
-        }
+    private _raiseOnDeleted(node: GraphNode<P>) {
+        for (const { onDeleted } of this._observers.values()) if (onDeleted) onDeleted(node);
     }
 }
 

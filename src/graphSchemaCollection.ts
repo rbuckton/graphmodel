@@ -3,10 +3,10 @@ import { GraphSchema } from "./graphSchema";
 export class GraphSchemaCollection<P extends object = any> {
     public readonly schema: GraphSchema<P>;
 
-    private schemas = new Map<string, GraphSchema>();
-    private readonly observers = new Map<GraphSchemaCollectionSubscription, GraphSchemaCollectionEvents>();
+    private _schemas = new Map<string, GraphSchema>();
+    private _observers = new Map<GraphSchemaCollectionSubscription, GraphSchemaCollectionEvents>();
 
-    /*@internal*/ static create<P extends object>(schema: GraphSchema<P>) {
+    /*@internal*/ static _create<P extends object>(schema: GraphSchema<P>) {
         return new GraphSchemaCollection<P>(schema);
     }
 
@@ -14,43 +14,41 @@ export class GraphSchemaCollection<P extends object = any> {
         this.schema = schema;
     }
 
-    public get size() { return this.schemas.size; }
+    public get size() { return this._schemas.size; }
 
     public subscribe(events: GraphSchemaCollectionEvents) {
-        const subscription: GraphSchemaCollectionSubscription = { unsubscribe: () => { this.observers.delete(subscription); } };
-        this.observers.set(subscription, { ...events });
+        const subscription: GraphSchemaCollectionSubscription = { unsubscribe: () => { this._observers.delete(subscription); } };
+        this._observers.set(subscription, { ...events });
         return subscription;
     }
 
     public has(schema: GraphSchema<P>) {
-        return this.schemas.has(schema.name);
+        return this._schemas.get(schema.name) === schema;
     }
 
     public get(name: string) {
-        return this.schemas.get(name);
+        return this._schemas.get(name);
     }
 
     public add(schema: GraphSchema<P>) {
-        if (this.schema.hasSchema(schema)) throw new Error("Schemas cannot be circular.");
+        if (schema.hasSchema(this.schema)) throw new Error("Schemas cannot be circular.");
         if (!schema.graph) {
-            this.schemas.set(schema.name, schema);
-            this.raiseOnAdded(schema);
+            this._schemas.set(schema.name, schema);
+            this._raiseOnAdded(schema);
         }
         return this;
     }
 
     public values() {
-        return this.schemas.values();
+        return this._schemas.values();
     }
 
     public [Symbol.iterator]() {
-        return this.schemas.values();
+        return this._schemas.values();
     }
 
-    private raiseOnAdded(schema: GraphSchema) {
-        for (const { onAdded } of this.observers.values()) {
-            if (onAdded) onAdded(schema);
-        }
+    private _raiseOnAdded(schema: GraphSchema) {
+        for (const { onAdded } of this._observers.values()) if (onAdded) onAdded(schema);
     }
 }
 

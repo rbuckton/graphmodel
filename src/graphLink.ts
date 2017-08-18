@@ -10,7 +10,7 @@ export class GraphLink<P extends object = any> extends GraphObject<P> {
     public readonly target: GraphNode<P>;
     public readonly index: number;
 
-    /*@internal*/ static create<P extends object>(owner: Graph<P>, source: GraphNode<P>, target: GraphNode<P>, index: number, category?: GraphCategory) {
+    /*@internal*/ static _create<P extends object>(owner: Graph<P>, source: GraphNode<P>, target: GraphNode<P>, index: number, category?: GraphCategory) {
         return new GraphLink<P>(owner, source, target, index, category);
     }
 
@@ -20,8 +20,8 @@ export class GraphLink<P extends object = any> extends GraphObject<P> {
         this.target = this.owner.importNode(target);
         this.index = index;
 
-        source.addLink(this);
-        target.addLink(this);
+        source._addLink(this);
+        target._addLink(this);
     }
 
     public * related(searchDirection: "source" | "target", { traverseLink, acceptLink }: GraphLinkTraversal<P> = { }) {
