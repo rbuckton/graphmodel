@@ -16,6 +16,9 @@ import { Graph } from "graphmodel";
 // create a graph
 const graph = new Graph();
 
+// define schema
+graph.schema.properties.getOrCreate("key");
+
 // add nodes
 const sourceNode = graph.nodes.getOrCreate("source");
 const targetNode = graph.nodes.getOrCreate("target");
@@ -29,7 +32,7 @@ for (const target of sourceNode.targets()) {}
 // find sources
 for (const source of targetNode.sources()) {}
 
-// add data to nodes/links
+// add data to nodes/links 
 sourceNode.set("key", value);
 link.set("key", value);
 ```
@@ -49,20 +52,32 @@ const folder = fileSystem.schema.categories.getOrCreate("folder");
 const child = fileSystem.schema.categories.getOrCreate("child");
 const symlink = fileSystem.schema.categories.getOrCreate("symlink");
 
+// properties
+const name = fileSystem.schema.properties.getOrCreate("name");
+
 // add the '/' directory
 const root = fileSystem.nodes.getOrCreate("/", folder);
+root.set(name, "/");
 
 // add the '/home' directory
-const home = fileSystem.nodes.getOrCreate("home", folder);
+const home = fileSystem.nodes.getOrCreate("/home", folder);
+home.set(name, "home");
 fileSystem.links.getOrCreate(root, home, child);
 
-// add a '/home/profile' file
-const profile = fileSystem.nodes.getOrCreate("profile", file);
-fileSystem.links.getOrCreate(home, profile, child);
+// add the '/home/jdoe' directory
+const homedir = fileSystem.nodes.getOrCreate("/home/jdoe", folder);
+homedir.set(name, "jdoe");
+fileSystem.links.getOrCreate(home, homedir, child);
 
-// add a symbolic link from '/home/profile' to '/home/profile2'
-const profile2 = fileSystem.nodes.getOrCreate("profile2", file);
-fileSystem.links.getOrCreate(home, profile2, child);
+// add a '/home/jdoe/profile' file
+const profile = fileSystem.nodes.getOrCreate("/home/jdoe/profile", file);
+profile.set(name, "profile");
+fileSystem.links.getOrCreate(homedir, profile, child);
+
+// add a symbolic link from '/home/jdoe/profile' to '/home/jdoe/profile2'
+const profile2 = fileSystem.nodes.getOrCreate("/home/jdoe/profile2", file);
+profile2.set(name, "profile2");
+fileSystem.links.getOrCreate(homedir, profile2, child);
 fileSystem.links.getOrCreate(profile, profile2, symlink);
 
 // find all files beneath '/'
@@ -72,14 +87,14 @@ const files = root.related("target", {
     acceptNode: node => node.hasCategory(file)
 });
 
-// find all containing folders of '/home/profile'
+// find all containing folders of '/home/jdoe/profile'
 const folders = profile.related("source", {
     traverseLink: link => link.hasCategory(child),
     traverseNode: node => node.hasCategory(folder),
     acceptNode: node => node.hasCategory(folder)
 });
 
-// resolve symbolic link for '/home/profile2'
+// resolve symbolic link for '/home/jdoe/profile2'
 const target = profile2.firstRelated("source", {
     traverseLink: link => link.hasCategory(symlink)
 });
