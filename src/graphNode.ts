@@ -12,7 +12,11 @@ export class GraphNode<P extends object = any> extends GraphObject<P> {
     private _incomingLinks = new Set<GraphLink<P>>();
     private _outgoingLinks = new Set<GraphLink<P>>();
 
-    private constructor(owner: Graph<P>, id: string, category?: GraphCategory) {
+    /*@internal*/ static _create<P extends object>(owner: Graph<P>, id: string, category?: GraphCategory<P>) {
+        return new GraphNode(owner, id, category);
+    }
+
+    private constructor(owner: Graph<P>, id: string, category?: GraphCategory<P>) {
         super(owner, category);
 
         this.id = id;
@@ -20,11 +24,9 @@ export class GraphNode<P extends object = any> extends GraphObject<P> {
         this.outgoingLinks = this._outgoingLinks;
     }
 
-    /*@internal*/ static _create<P extends object>(owner: Graph<P>, id: string, category?: GraphCategory) {
-        return new GraphNode(owner, id, category);
-    }
+    public get owner() { return super.owner!; }
 
-    public * links(...linkCategories: GraphCategory[]) {
+    public * links(...linkCategories: GraphCategory<P>[]) {
         if (linkCategories.length) {
             const set = new Set(linkCategories);
             for (const link of this.incomingLinks) if (link.hasCategoryInSet(set, "exact")) yield link;
@@ -62,12 +64,12 @@ export class GraphNode<P extends object = any> extends GraphObject<P> {
         }
     }
 
-    public * sources(...linkCategories: GraphCategory[]) {
+    public * sources(...linkCategories: GraphCategory<P>[]) {
         const set = linkCategories.length && new Set(linkCategories);
         for (const link of this.incomingLinks) if (!set || link.hasCategoryInSet(set, "exact")) yield link.source;
     }
 
-    public * targets(...linkCategories: GraphCategory[]) {
+    public * targets(...linkCategories: GraphCategory<P>[]) {
         const set = linkCategories.length && new Set(linkCategories);
         for (const link of this.outgoingLinks) if (!set || link.hasCategoryInSet(set, "exact")) yield link.target;
     }

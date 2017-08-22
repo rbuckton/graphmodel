@@ -4,16 +4,17 @@ import { GraphProperty } from "./graphProperty";
 import { Graph } from "./graph";
 
 export abstract class GraphObject<P extends object = any> {
-    public readonly owner: Graph<P>;
-
-    private _categories = new Set<GraphCategory>();
-    private _properties = new Map<GraphProperty<keyof P, P[keyof P]>, P[keyof P]>();
+    private _owner: Graph<P> | undefined;
+    private _categories = new Set<GraphCategory<P>>();
+    private _properties = new Map<GraphProperty<P, keyof P>, P[keyof P]>();
     private _observers = new Map<GraphObjectSubscription, GraphObjectEvents>();
 
-    constructor(owner: Graph<P>, category?: GraphCategory) {
-        this.owner = owner;
+    constructor(owner?: Graph<P>, category?: GraphCategory<P>) {
+        this._owner = owner;
         if (category) this.addCategory(category);
     }
+
+    public get owner() { return this._owner; }
 
     public get categoryCount() { return this._categories.size; }
 
@@ -25,7 +26,7 @@ export abstract class GraphObject<P extends object = any> {
         return subscription;
     }
 
-    public hasCategory(category: string | GraphCategory | Iterable<GraphCategory>) {
+    public hasCategory(category: string | GraphCategory<P> | Iterable<GraphCategory<P>>) {
         if (isIterableObject(category)) {
             return this.hasCategoryInSet(new Set(category), "exact");
         }
@@ -38,9 +39,9 @@ export abstract class GraphObject<P extends object = any> {
         return false;
     }
 
-    public hasCategoryInSet(categorySet: ReadonlySet<GraphCategory>, match: "exact" | "inherited") {
+    public hasCategoryInSet(categorySet: ReadonlySet<GraphCategory<P>>, match: "exact" | "inherited") {
         if (match === "inherited") {
-            const inherited = new Set<GraphCategory>();
+            const inherited = new Set<GraphCategory<P>>();
             for (let category of categorySet) {
                 while (category) {
                     inherited.add(category);
@@ -60,7 +61,7 @@ export abstract class GraphObject<P extends object = any> {
         return false;
     }
 
-    public addCategory(category: GraphCategory) {
+    public addCategory(category: GraphCategory<P>) {
         if (!this._categories.has(category)) {
             this._categories.add(category);
             this._raiseOnCategoryChanged("add", category);
@@ -68,7 +69,7 @@ export abstract class GraphObject<P extends object = any> {
         return this;
     }
 
-    public deleteCategory(category: GraphCategory) {
+    public deleteCategory(category: GraphCategory<P>) {
         if (this._categories.delete(category)) {
             this._raiseOnCategoryChanged("delete", category);
             return true;
@@ -76,23 +77,23 @@ export abstract class GraphObject<P extends object = any> {
         return false;
     }
 
-    public has<K extends keyof P>(key: K | GraphProperty<K, P[K]>) {
-        const property = typeof key === "string" ? this.owner.schema.findProperty(key) : key;
+    public has<K extends keyof P>(key: K | GraphProperty<P, K>) {
+        const property = typeof key === "string" ? this.owner!.schema.findProperty(key) : key;
         return property !== undefined && this._properties.has(property);
     }
 
-    public get<K extends keyof P>(key: K | GraphProperty<K, P[K]>): P[K] | undefined {
-        const property = typeof key === "string" ? this.owner.schema.findProperty(key) : key;
+    public get<K extends keyof P>(key: K | GraphProperty<P, K>): P[K] | undefined {
+        const property = typeof key === "string" ? this.owner!.schema.findProperty(key) : key;
         return property && this._properties.get(property);
     }
 
-    public set<K extends keyof P>(key: K | GraphProperty<K, P[K]>, value: P[K]) {
+    public set<K extends keyof P>(key: K | GraphProperty<P, K>, value: P[K]) {
         if (value === undefined || value === null) {
             this.delete(key);
             return this;
         }
 
-        const property = typeof key === "string" ? this.owner.schema.findProperty(key) : key;
+        const property = typeof key === "string" ? this.owner!.schema.findProperty(key) : key;
         if (property) {
             this._properties.set(property, value);
             this._raiseOnPropertyChanged(property);
@@ -100,8 +101,8 @@ export abstract class GraphObject<P extends object = any> {
         return this;
     }
 
-    public delete<K extends keyof P>(key: K | GraphProperty<K, P[K]>) {
-        const property = typeof key === "string" ? this.owner.schema.findProperty(key) : key;
+    public delete<K extends keyof P>(key: K | GraphProperty<P, K>) {
+        const property = typeof key === "string" ? this.owner!.schema.findProperty(key) : key;
         if (property && this._properties.delete(property)) {
             this._raiseOnPropertyChanged(property);
             return false;
@@ -129,22 +130,28 @@ export abstract class GraphObject<P extends object = any> {
         return this._properties[Symbol.iterator]();
     }
 
+    /*@internal*/ _setOwner(owner: Graph<P>) {
+        if (!this._owner) {
+            this._owner = owner;
+        }
+    }
+
     /*@internal*/ _merge(other: this) {
         for (const category of other.categories()) this.addCategory(category);
         for (const [key, value] of other) this.set(key, value);
     }
 
-    /*@internal*/ _raiseOnCategoryChanged(change: "add" | "delete", category: GraphCategory) {
+    /*@internal*/ _raiseOnCategoryChanged(change: "add" | "delete", category: GraphCategory<P>) {
         for (const { onCategoryChanged } of this._observers.values()) if (onCategoryChanged) onCategoryChanged(change, category);
     }
 
-    /*@internal*/ _raiseOnPropertyChanged(property: GraphProperty<keyof P, P[keyof P]>) {
+    /*@internal*/ _raiseOnPropertyChanged(property: GraphProperty<P, keyof P>) {
         for (const { onPropertyChanged } of this._observers.values()) if (onPropertyChanged) onPropertyChanged(property.id);
     }
 }
 
 export interface GraphObjectEvents<P extends object = any> {
-    onCategoryChanged?: (change: "add" | "delete", category: GraphCategory) => void;
+    onCategoryChanged?: (change: "add" | "delete", category: GraphCategory<P>) => void;
     onPropertyChanged?: (name: keyof P) => void;
 }
 

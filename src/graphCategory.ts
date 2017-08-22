@@ -1,10 +1,10 @@
-export class GraphCategory {
+export class GraphCategory<P extends object = any> {
     public readonly id: string;
 
     private _basedOn: GraphCategory;
 
-    /*@internal*/ static _create(id: string) {
-        return new GraphCategory(id);
+    /*@internal*/ static _create<P extends object>(id: string) {
+        return new GraphCategory<P>(id);
     }
 
     private constructor(id: string) {
@@ -20,14 +20,14 @@ export class GraphCategory {
         }
     }
 
-    public isBasedOn(category: string | GraphCategory) {
+    public isBasedOn(category: string | GraphCategory<P>) {
         if (typeof category === "string") {
-            for (let base: GraphCategory = this; base; base = base.basedOn) {
+            for (let base: GraphCategory<P> = this; base; base = base.basedOn) {
                 if (base.id === category) return true;
             }
         }
         else {
-            for (let base: GraphCategory = this; base; base = base.basedOn) {
+            for (let base: GraphCategory<P> = this; base; base = base.basedOn) {
                 if (base === category) return true;
             }
         }

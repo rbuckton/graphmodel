@@ -38,8 +38,8 @@ export class GraphLinkCollection<P extends object = any> {
     }
 
     public getOrCreate(source: string | GraphNode<P>, target: string | GraphNode<P>, index?: number): GraphLink<P>;
-    public getOrCreate(source: string | GraphNode<P>, target: string | GraphNode<P>, category: GraphCategory): GraphLink<P>;
-    public getOrCreate(source: string | GraphNode<P>, target: string | GraphNode<P>, indexOrCategory?: number | GraphCategory) {
+    public getOrCreate(source: string | GraphNode<P>, target: string | GraphNode<P>, category: GraphCategory<P>): GraphLink<P>;
+    public getOrCreate(source: string | GraphNode<P>, target: string | GraphNode<P>, indexOrCategory?: number | GraphCategory<P>) {
         const sourceId = typeof source === "string" ? source : source.id;
         const targetId = typeof target === "string" ? target : target.id;
         const index = typeof indexOrCategory === "number" ? indexOrCategory : 0;
@@ -79,8 +79,8 @@ export class GraphLinkCollection<P extends object = any> {
     }
 
     public delete(link: GraphLink<P>): boolean;
-    public delete(sourceId: string, targetId: string, category: GraphCategory): GraphLink<P>;
-    public delete(linkOrSourceId: GraphLink<P> | string, targetId?: string, category?: GraphCategory) {
+    public delete(sourceId: string, targetId: string, category: GraphCategory<P>): GraphLink<P>;
+    public delete(linkOrSourceId: GraphLink<P> | string, targetId?: string, category?: GraphCategory<P>) {
         let sourceId: string;
         let index: number;
         if (typeof linkOrSourceId === "string") {
@@ -148,23 +148,23 @@ export class GraphLinkCollection<P extends object = any> {
         }
     }
 
-    public * to(node: string | GraphNode<P>, ...categories: GraphCategory[]) {
+    public * to(node: string | GraphNode<P>, ...categories: GraphCategory<P>[]) {
         const set = categories.length && new Set(categories);
         const target = typeof node === "string" ? this.graph.nodes.get(node) : node;
         if (target) for (const incoming of target.incomingLinks) if (!set || incoming.hasCategoryInSet(set, "exact")) yield incoming;
     }
 
-    public * from(node: string | GraphNode<P>, ...categories: GraphCategory[]) {
+    public * from(node: string | GraphNode<P>, ...categories: GraphCategory<P>[]) {
         const set = categories.length && new Set(categories);
         const source = typeof node === "string" ? this.graph.nodes.get(node) : node;
         if (source) for (const outgoing of source.outgoingLinks) if (!set || outgoing.hasCategoryInSet(set, "exact")) yield outgoing;
     }
 
-    public * byProperty<K extends keyof P>(key: K | GraphProperty<K, P[K]>, value: P[K]) {
+    public * byProperty<K extends keyof P>(key: K | GraphProperty<P, K>, value: P[K]) {
         for (const link of this) if (link.get(key) === value) yield link;
     }
 
-    public * byCategory(...categories: GraphCategory[]) {
+    public * byCategory(...categories: GraphCategory<P>[]) {
         const set = categories.length && new Set(categories);
         for (const link of this) if (!set || link.hasCategoryInSet(set, "exact")) yield link;
     }

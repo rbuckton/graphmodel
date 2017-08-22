@@ -1,9 +1,9 @@
-export class GraphProperty<K extends string = string, T = any> {
-    public readonly ["[[DataType]]"]: T;
+export class GraphProperty<P extends object = any, K extends keyof P = keyof P> {
+    public readonly ["[[DataType]]"]: P[K];
     public readonly id: K;
 
-    /*@internal*/ static create<K extends string, T>(id: K) {
-        return new GraphProperty<K, T>(id);
+    /*@internal*/ static _create<P extends object, K extends keyof P>(id: K) {
+        return new GraphProperty<P, K>(id);
     }
 
     private constructor(id: K) {

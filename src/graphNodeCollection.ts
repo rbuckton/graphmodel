@@ -34,7 +34,7 @@ export class GraphNodeCollection<P extends object = any> {
         return this._nodes.get(id);
     }
 
-    public getOrCreate(id: string, category?: GraphCategory) {
+    public getOrCreate(id: string, category?: GraphCategory<P>) {
         let node = this.get(id);
         if (!node) {
             node = GraphNode._create(this.graph, id, category);
@@ -94,11 +94,11 @@ export class GraphNodeCollection<P extends object = any> {
         return this._nodes.values();
     }
 
-    public * byProperty<K extends keyof P>(key: K | GraphProperty<K, P[K]>, value: P[K]) {
+    public * byProperty<K extends keyof P>(key: K | GraphProperty<P, K>, value: P[K]) {
         for (const node of this) if (node.get(key) === value) yield node;
     }
 
-    public * byCategory(...categories: GraphCategory[]) {
+    public * byCategory(...categories: GraphCategory<P>[]) {
         const set = categories.length && new Set(categories);
         for (const node of this) if (!set || node.hasCategory(set)) yield node;
     }

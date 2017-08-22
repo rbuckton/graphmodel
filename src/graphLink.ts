@@ -10,11 +10,11 @@ export class GraphLink<P extends object = any> extends GraphObject<P> {
     public readonly target: GraphNode<P>;
     public readonly index: number;
 
-    /*@internal*/ static _create<P extends object>(owner: Graph<P>, source: GraphNode<P>, target: GraphNode<P>, index: number, category?: GraphCategory) {
+    /*@internal*/ static _create<P extends object>(owner: Graph<P>, source: GraphNode<P>, target: GraphNode<P>, index: number, category?: GraphCategory<P>) {
         return new GraphLink<P>(owner, source, target, index, category);
     }
 
-    private constructor(owner: Graph<P>, source: GraphNode<P>, target: GraphNode<P>, index: number, category?: GraphCategory) {
+    private constructor(owner: Graph<P>, source: GraphNode<P>, target: GraphNode<P>, index: number, category?: GraphCategory<P>) {
         super(owner, category);
         this.source = this.owner.importNode(source);
         this.target = this.owner.importNode(target);
@@ -23,6 +23,8 @@ export class GraphLink<P extends object = any> extends GraphObject<P> {
         source._addLink(this);
         target._addLink(this);
     }
+
+    public get owner() { return super.owner!; }
 
     public * related(searchDirection: "source" | "target", { traverseLink, acceptLink }: GraphLinkTraversal<P> = { }) {
         const accepted = new Set<GraphLink<P>>();

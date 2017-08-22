@@ -1,9 +1,9 @@
 import { GraphSchemaCollection } from "./graphSchemaCollection";
-import { GraphCategory } from "./graphCategory";
 import { GraphCategoryCollection } from "./graphCategoryCollection";
-import { Graph } from "./graph";
+import { GraphCategory } from "./graphCategory";
 import { GraphPropertyCollection } from "./graphPropertyCollection";
 import { GraphProperty } from "./graphProperty";
+import { Graph } from "./graph";
 
 export class GraphSchema<P extends object = any> {
     public readonly ["[[Properties]]"]: P;
