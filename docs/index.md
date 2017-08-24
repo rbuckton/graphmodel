@@ -1,6 +1,3 @@
----
-
----
 # API Overview
 * [Graph](graph.md)
 * [GraphSchema](graphSchema.md)
