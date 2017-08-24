@@ -101,272 +101,31 @@ const target = profile2.firstRelated("source", {
 ```
 
 ## API Overview
+* [Graph](docs/graph.md)
+* [GraphSchema](docs/graphSchema.md)
+* [GraphSchemaCollection](docs/graphSchemaCollection.md)
+* [GraphCategory](docs/graphCategory.md)
+* [GraphCategoryCollection](docs/graphCategoryCollection.md)
+* [GraphProperty](docs/graphProperty.md)
+* [GraphPropertyCollection](docs/graphPropertyCollection.md)
+* [GraphObject](docs/graphObject.md)
+* [GraphNode](docs/graphNode.md)
+* [GraphNodeCollection](docs/graphNodeCollection.md)
+* [GraphLink](docs/graphLink.md)
+* [GraphLinkCollection](docs/graphLinkCollection.md)
 
-### Graph
-```ts
-export declare class Graph<P extends object = any> {
-    constructor(...schemas: GraphSchema<P>[]);
-    readonly links: GraphLinkCollection<P>;
-    readonly nodes: GraphNodeCollection<P>;
-    readonly schema: GraphSchema<P>;
-    importSchemas(graph: Graph<P>): boolean;
-    importLink(link: GraphLink<P>): GraphLink<P>;
-    importNode(node: GraphNode<P>): GraphNode<P>;
-    importSubset(node: GraphNode<P>, depth: number): GraphNode<P>;
-    rename(node: GraphNode<P>, newId: string): GraphNode<P>;
-    rename(node: string, newId: string): GraphNode<P> | undefined;
-    rename(node: string | GraphNode<P>, newId: string): GraphNode<P> | undefined;
-    clear(): void;
-}
-```
+## License
 
-### GraphSchema
-```ts
-export declare class GraphSchema<P extends object = any> {
-    constructor(name: string, ...schemas: GraphSchema<P>[]);
-    readonly graph: Graph<P> | undefined;
-    readonly schemas: GraphSchemaCollection<P>;
-    readonly categories: GraphCategoryCollection<P>;
-    readonly properties: GraphPropertyCollection<P>;
-    readonly name: string;
-    hasSchema(schema: GraphSchema<P>): boolean;
-    addSchema(schema: GraphSchema<P>): this;
-    allSchemas(): IterableIterator<GraphSchema<P>>;
-    findCategory(id: string): GraphCategory | undefined;
-    findCategories(...categoryIds: string[]): IterableIterator<GraphCategory>;
-    findProperty<K extends keyof P>(id: K): GraphProperty<K, P[K]> | undefined;
-    findProperties<K extends keyof P>(...propertyIds: K[]): IterableIterator<GraphProperty<K, P[K]>>;
-}
-```
+Copyright 2017 Ron Buckton
 
-### GraphSchemaCollection
-```ts
-export declare class GraphSchemaCollection<P extends object = any> {
-    private constructor();
-    readonly schema: GraphSchema<P>;
-    readonly size: number;
-    subscribe(events: GraphSchemaCollectionEvents): GraphSchemaCollectionSubscription;
-    has(schema: GraphSchema<P>): boolean;
-    get(name: string): GraphSchema<any> | undefined;
-    add(schema: GraphSchema<P>): this;
-    values(): IterableIterator<GraphSchema<any>>;
-    [Symbol.iterator](): IterableIterator<GraphSchema<any>>;
-}
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-export interface GraphSchemaCollectionEvents<P extends object = any> {
-    onAdded?: (schema: GraphSchema<P>) => void;
-}
+   http://www.apache.org/licenses/LICENSE-2.0
 
-export interface GraphSchemaCollectionSubscription {
-    unsubscribe(): void;
-}
-```
-
-### GraphCategory
-```ts
-export declare class GraphCategory {
-    private constructor(id: string);
-    readonly id: string;
-    basedOn: GraphCategory;
-    isBasedOn(category: string | GraphCategory): boolean;
-}
-```
-
-### GraphCategoryCollection
-```ts
-export declare class GraphCategoryCollection<P extends object = any> {
-    private constructor(schema: GraphSchema<P>);
-    readonly schema: GraphSchema<P>;
-    readonly size: number;
-    subscribe(events: GraphCategoryCollectionEvents): GraphCategoryCollectionSubscription;
-    has(category: GraphCategory): boolean;
-    getOrCreate(id: string): GraphCategory;
-    add(category: GraphCategory): this;
-    values(): IterableIterator<GraphCategory>;
-    basedOn(base: GraphCategory): IterableIterator<GraphCategory>;
-    delete(category: GraphCategory): boolean;
-    clear(): void;
-    [Symbol.iterator](): IterableIterator<GraphCategory>;
-}
-
-export interface GraphCategoryCollectionEvents {
-    onAdded?: (category: GraphCategory) => void;
-    onDeleted?: (category: GraphCategory) => void;
-}
-
-export interface GraphCategoryCollectionSubscription {
-    unsubscribe(): void;
-}
-```
-
-### GraphProperty
-```ts
-export declare class GraphProperty<K extends string = string, T = any> {
-    private constructor();
-    readonly id: K;
-}
-```
-
-### GraphPropertyCollection
-```ts
-export declare class GraphPropertyCollection<P extends object = any> {
-    private constructor();
-    readonly schema: GraphSchema<P>;
-    readonly size: number;
-    subscribe(events: GraphPropertyCollectionEvents<P>): GraphPropertyCollectionSubscription;
-    has(property: GraphProperty): boolean;
-    get<K extends keyof P>(id: K): GraphProperty<K, P[K]> | undefined;
-    getOrCreate<K extends keyof P>(id: K): GraphProperty<K, P[K]>;
-    add<K extends keyof P>(property: GraphProperty<K, P[K]>): this;
-    delete(property: GraphProperty): boolean;
-    clear(): void;
-    values(): IterableIterator<GraphProperty<keyof P, P[keyof P]>>;
-    [Symbol.iterator](): IterableIterator<GraphProperty<keyof P, P[keyof P]>>;
-}
-
-export interface GraphPropertyCollectionEvents<P extends object = any> {
-    onAdded?: (category: GraphProperty<keyof P, P[keyof P]>) => void;
-    onDeleted?: (category: GraphProperty<keyof P, P[keyof P]>) => void;
-}
-
-export interface GraphPropertyCollectionSubscription {
-    unsubscribe(): void;
-}
-```
-
-### GraphObject
-```ts
-export declare abstract class GraphObject<P extends object = any> {
-    constructor(owner: Graph<P>, category?: GraphCategory);
-    readonly owner: Graph<P>;
-    readonly categoryCount: number;
-    readonly propertyCount: number;
-    subscribe(events: GraphObjectEvents<P>): GraphObjectSubscription;
-    hasCategory(category: string | GraphCategory | Iterable<GraphCategory>): boolean;
-    hasCategoryInSet(categorySet: Set<GraphCategory>, match: "exact" | "inherited"): boolean;
-    addCategory(category: GraphCategory): this;
-    deleteCategory(category: GraphCategory): boolean;
-    has<K extends keyof P>(key: K | GraphProperty<K, P[K]>): boolean;
-    get<K extends keyof P>(key: K | GraphProperty<K, P[K]>): P[K] | undefined;
-    set<K extends keyof P>(key: K | GraphProperty<K, P[K]>, value: P[K]): this;
-    delete<K extends keyof P>(key: K | GraphProperty<K, P[K]>): boolean;
-    keys(): IterableIterator<GraphProperty<keyof P, P[keyof P]>>;
-    values(): IterableIterator<P[keyof P]>;
-    entries(): IterableIterator<[GraphProperty<keyof P, P[keyof P]>, P[keyof P]]>;
-    categories(): IterableIterator<GraphCategory>;
-    [Symbol.iterator](): IterableIterator<[GraphProperty<keyof P, P[keyof P]>, P[keyof P]]>;
-}
-
-export interface GraphObjectEvents<P extends object = any> {
-    onCategoryChanged?: (change: "add" | "delete", category: GraphCategory) => void;
-    onPropertyChanged?: (name: keyof P) => void;
-}
-
-export interface GraphObjectSubscription {
-    unsubscribe(): void;
-}
-```
-
-### GraphNode
-```ts
-export declare class GraphNode<P extends object = any> extends GraphObject<P> {
-    private constructor();
-    readonly id: string;
-    readonly incomingLinks: ReadonlySet<GraphLink<P>>;
-    readonly outgoingLinks: ReadonlySet<GraphLink<P>>;
-    links(...linkCategories: GraphCategory[]): IterableIterator<GraphLink<P>>;
-    firstRelated(searchDirection: "source" | "target", traversal?: GraphNodeTraversal<P>): GraphNode<P> | undefined;
-    related(searchDirection: "source" | "target", traversal?: GraphNodeTraversal<P>): IterableIterator<GraphNode<P>>;
-    sources(...linkCategories: GraphCategory[]): IterableIterator<GraphNode<P>>;
-    targets(...linkCategories: GraphCategory[]): IterableIterator<GraphNode<P>>;
-    copy(newId: string): GraphNode<P>;
-}
-
-export interface GraphNodeTraversal<P extends object = any> {
-    traverseLink?: (link: GraphLink<P>) => boolean;
-    traverseNode?: (node: GraphNode<P>) => boolean;
-    acceptNode?: (node: GraphNode<P>) => boolean;
-}
-```
-
-### GraphNodeCollection
-```ts
-export declare class GraphNodeCollection<P extends object = any> {
-    private constructor();
-    readonly graph: Graph<P>;
-    readonly size: number;
-    subscribe(events: GraphNodeCollectionEvents<P>): GraphNodeCollectionSubscription;
-    has(node: GraphNode<P>): boolean;
-    get(id: string): GraphNode<P> | undefined;
-    getOrCreate(id: string, category?: GraphCategory): GraphNode<P>;
-    add(node: GraphNode<P>): this;
-    delete(nodeId: string): GraphNode<P>;
-    delete(node: GraphNode<P>): boolean;
-    clear(): void;
-    values(): IterableIterator<GraphNode<P>>;
-    byProperty<K extends keyof P>(key: K | GraphProperty<K, P[K]>, value: P[K]): IterableIterator<GraphNode<P>>;
-    byCategory(...categories: GraphCategory[]): IterableIterator<GraphNode<P>>;
-    filter(cb: (node: GraphNode<P>) => boolean): IterableIterator<GraphNode<P>>;
-    [Symbol.iterator](): IterableIterator<GraphNode<P>>;
-}
-
-export interface GraphNodeCollectionEvents<P extends object = any> {
-    onAdded?: (node: GraphNode<P>) => void;
-    onDeleted?: (node: GraphNode<P>) => void;
-}
-
-export interface GraphNodeCollectionSubscription {
-    unsubscribe(): void;
-}
-```
-
-### GraphLink
-```ts
-export declare class GraphLink<P extends object = any> extends GraphObject<P> {
-    private constructor();
-    readonly source: GraphNode<P>;
-    readonly target: GraphNode<P>;
-    readonly index: number;
-    related(searchDirection: "source" | "target", traversal?: GraphLinkTraversal<P>): IterableIterator<GraphLink<P>>;
-}
-
-export interface GraphLinkTraversal<P extends object = any> {
-    traverseLink?: (this: void, link: GraphLink<P>) => boolean;
-    acceptLink?: (this: void, link: GraphLink<P>) => boolean;
-}
-```
-
-### GraphLinkCollection
-```ts
-export declare class GraphLinkCollection<P extends object = any> {
-    private constructor();
-    readonly graph: Graph<P>;
-    readonly size: number;
-    subscribe(events: GraphLinkCollectionEvents<P>): GraphLinkCollectionSubscription;
-    has(link: GraphLink<P>): boolean;
-    get(sourceId: string, targetId: string, index?: number): GraphLink<P> | undefined;
-    getOrCreate(source: string | GraphNode<P>, target: string | GraphNode<P>, index?: number): GraphLink<P>;
-    getOrCreate(source: string | GraphNode<P>, target: string | GraphNode<P>, category: GraphCategory): GraphLink<P>;
-    add(link: GraphLink<P>): this;
-    delete(link: GraphLink<P>): boolean;
-    delete(sourceId: string, targetId: string, category: GraphCategory): GraphLink<P>;
-    clear(): void;
-    values(): IterableIterator<GraphLink<P>>;
-    between(source: GraphNode<P>, target: GraphNode<P>): IterableIterator<GraphLink<P>>;
-    to(node: string | GraphNode<P>, ...categories: GraphCategory[]): IterableIterator<GraphLink<P>>;
-    from(node: string | GraphNode<P>, ...categories: GraphCategory[]): IterableIterator<GraphLink<P>>;
-    byProperty<K extends keyof P>(key: K | GraphProperty<K, P[K]>, value: P[K]): IterableIterator<GraphLink<P>>;
-    byCategory(...categories: GraphCategory[]): IterableIterator<GraphLink<P>>;
-    filter(cb: (link: GraphLink<P>) => boolean): IterableIterator<GraphLink<P>>;
-    [Symbol.iterator](): IterableIterator<GraphLink<P>>;
-}
-
-export interface GraphLinkCollectionEvents<P extends object = any> {
-    onAdded?: (this: void, link: GraphLink<P>) => void;
-    onDeleted?: (this: void, link: GraphLink<P>) => void;
-}
-
-export interface GraphLinkCollectionSubscription {
-    unsubscribe(): void;
-}
-```
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
