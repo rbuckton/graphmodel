@@ -24,3 +24,4 @@ export declare class GraphCategory<P extends object = any> {
 * [GraphCategoryCollection](graphCategoryCollection.md)
 * [GraphObject](graphObject.md)
 * [Graph](graph.md)
+* [API Documentation](index.md)

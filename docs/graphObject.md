@@ -98,3 +98,4 @@ export interface GraphObjectSubscription {
 * [GraphProperty](graphProperty.md)
 * [GraphSchema](graphSchema.md)
 * [Graph](graph.md)
+* [API Documentation](index.md)

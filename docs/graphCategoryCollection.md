@@ -76,3 +76,4 @@ export interface GraphCategoryCollectionSubscription {
 * [GraphCategory](graphCategory.md)
 * [GraphSchema](graphSchema.md)
 * [Graph](graph.md)
+* [API Documentation](index.md)

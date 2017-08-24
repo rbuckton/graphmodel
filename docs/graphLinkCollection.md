@@ -106,3 +106,4 @@ export interface GraphLinkCollectionSubscription {
 * [GraphCategory](graphCategory.md)
 * [GraphProperty](graphProperty.md)
 * [Graph](graph.md)
+* [API Documentation](index.md)

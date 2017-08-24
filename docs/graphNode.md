@@ -90,3 +90,4 @@ export interface GraphNodeTraversal<P extends object = any> {
 * [GraphCategory](graphCategory.md)
 * [GraphNodeCollection](graphNodeCollection.md)
 * [Graph](graph.md)
+* [API Documentation](index.md)

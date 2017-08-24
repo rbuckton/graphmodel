@@ -49,3 +49,4 @@ export interface GraphLinkTraversal<P extends object = any> {
 * [GraphNode](graphNode.md)
 * [GraphLinkCollection](graphLinkCollection.md)
 * [Graph](graph.md)
+* [API Documentation](index.md)

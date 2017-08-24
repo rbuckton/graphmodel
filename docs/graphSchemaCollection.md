@@ -55,3 +55,4 @@ export interface GraphSchemaCollectionSubscription {
 ### See Also
 * [GraphSchema](graphSchema.md)
 * [Graph](graph.md)
+* [API Documentation](index.md)

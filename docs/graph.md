@@ -67,3 +67,4 @@ export declare class Graph<P extends object = any> extends GraphObject<P> {
 * [GraphNodeCollection](graphNodeCollection.md)
 * [GraphLink](graphLink.md)
 * [GraphLinkCollection](graphLinkCollection.md)
+* [API Documentation](index.md)

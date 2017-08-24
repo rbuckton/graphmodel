@@ -89,3 +89,4 @@ export interface GraphNodeCollectionSubscription {
 * [GraphCategory](graphCategory.md)
 * [GraphProperty](graphProperty.md)
 * [Graph](graph.md)
+* [API Documentation](index.md)

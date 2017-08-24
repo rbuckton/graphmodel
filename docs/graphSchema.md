@@ -65,3 +65,4 @@ export declare class GraphSchema<P extends object = any> {
 * [GraphProperty](graphProperty.md)
 * [GraphSchemaCollection](graphSchemaCollection.md)
 * [Graph](graph.md)
+* [API Documentation](index.md)

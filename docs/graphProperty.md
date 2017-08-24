@@ -20,3 +20,4 @@ export declare class GraphProperty<P extends object = any, K extends keyof P = k
 * [GraphPropertyCollection](graphPropertyCollection.ts)
 * [GraphObject](graphObject.ts)
 * [Graph](graph.ts)
+* [API Documentation](index.md)
