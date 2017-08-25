@@ -21,11 +21,11 @@ import { GraphNodeCollection } from "./graphNodeCollection";
 import { GraphLink } from "./graphLink";
 import { GraphLinkCollection } from "./graphLinkCollection";
 
-class DocumentSchema<P extends object> extends GraphSchema<P> {
-    public readonly graph: Graph<P>;
+class DocumentSchema extends GraphSchema {
+    public readonly graph: Graph;
 
-    constructor(graph: Graph<P>, ...schemas: GraphSchema<P>[]) {
-        super("#document", ...schemas);
+    constructor(graph: Graph) {
+        super("#document");
         this.graph = graph;
     }
 }
@@ -33,22 +33,21 @@ class DocumentSchema<P extends object> extends GraphSchema<P> {
 /**
  * A directed graph consisting of nodes and links.
  */
-export class Graph<P extends object = any> extends GraphObject<P> {
+export class Graph extends GraphObject {
     /**
      * Gets the collection of links in the graph.
      */
-    public readonly links = GraphLinkCollection._create<P>(this);
+    public readonly links = GraphLinkCollection._create(this);
 
     /**
      * Gets the collection of nodes in the graph.
      */
-    public readonly nodes = GraphNodeCollection._create<P>(this);
+    public readonly nodes = GraphNodeCollection._create(this);
 
-    private _schema: GraphSchema<P>;
+    private _schema: DocumentSchema | undefined;
 
-    constructor(...schemas: GraphSchema<P>[]) {
+    constructor() {
         super();
-        this._schema = new DocumentSchema(this, ...schemas);
     }
 
     /**
@@ -59,12 +58,17 @@ export class Graph<P extends object = any> extends GraphObject<P> {
     /**
      * Gets the document schema for this object.
      */
-    public get schema() { return this._schema; }
+    public get schema(): GraphSchema {
+        if (!this._schema) {
+            this._schema = new DocumentSchema(this);
+        }
+        return this._schema;
+    }
 
     /**
      * Adds a new schema to the graph.
      */
-    public addSchema(schema: GraphSchema<P>) {
+    public addSchema(schema: GraphSchema) {
         if (schema !== this.schema) {
             this.schema.addSchema(schema);
         }
@@ -74,7 +78,7 @@ export class Graph<P extends object = any> extends GraphObject<P> {
     /**
      * Copies the schemas from another graph.
      */
-    public copySchemas(graph: Graph<P>) {
+    public copySchemas(graph: Graph) {
         if (graph === this) return false;
         let changed = false;
         for (const category of graph.schema.categories) {
@@ -101,14 +105,14 @@ export class Graph<P extends object = any> extends GraphObject<P> {
     /**
      * Imports a link (along with its source and target nodes) into the graph.
      */
-    public importLink(link: GraphLink<P>) {
+    public importLink(link: GraphLink) {
         return this._importLink(link, /*excludeSchema*/ false);
     }
 
     /**
      * Imports a node into the graph.
      */
-    public importNode(node: GraphNode<P>): GraphNode<P> {
+    public importNode(node: GraphNode): GraphNode {
         return this._importNode(node, /*excludeSchema*/ false);
     }
 
@@ -116,8 +120,8 @@ export class Graph<P extends object = any> extends GraphObject<P> {
      * Imports a subset of nodes into the graph.
      * @param depth The depth of outgoing links to import.
      */
-    public importSubset(node: GraphNode<P>, depth: number): GraphNode<P> {
-        return this._importSubset(node, depth, /*excludeSchema*/ false, /*seen*/ new Set<GraphNode<P>>());
+    public importSubset(node: GraphNode, depth: number): GraphNode {
+        return this._importSubset(node, depth, /*excludeSchema*/ false, /*seen*/ new Set<GraphNode>());
     }
 
     /**
@@ -132,14 +136,14 @@ export class Graph<P extends object = any> extends GraphObject<P> {
      * Renames a node.
      * @param newId The new id for the node.
      */
-    public renameNode(node: GraphNode<P>, newId: string): GraphNode<P>;
+    public renameNode(node: GraphNode, newId: string): GraphNode;
     /**
      * Renames a node.
      * @param nodeId The id of the node to rename.
      * @param newId The new id for the node.
      */
-    public renameNode(nodeId: string, newId: string): GraphNode<P> | undefined;
-    public renameNode(node: string | GraphNode<P>, newId: string) {
+    public renameNode(nodeId: string, newId: string): GraphNode | undefined;
+    public renameNode(node: string | GraphNode, newId: string) {
         const existingNode = typeof node === "string" ? this.nodes.get(node) : node;
         if (existingNode) {
             const newNode = existingNode.copy(newId);
@@ -150,7 +154,7 @@ export class Graph<P extends object = any> extends GraphObject<P> {
         return undefined;
     }
 
-    private _importLink(link: GraphLink<P>, excludeSchema: boolean) {
+    private _importLink(link: GraphLink, excludeSchema: boolean) {
         if (link.owner === this) return link;
         if (!excludeSchema) this.copySchemas(link.owner);
         const source = this._importNode(link.source, /*excludeSchema*/ true);
@@ -160,7 +164,7 @@ export class Graph<P extends object = any> extends GraphObject<P> {
         return imported;
     }
 
-    private _importNode(node: GraphNode<P>, excludeSchema: boolean) {
+    private _importNode(node: GraphNode, excludeSchema: boolean) {
         if (node.owner === this) return node;
         if (!excludeSchema) this.copySchemas(node.owner);
         const imported = this.nodes.getOrCreate(node.id);
@@ -168,7 +172,7 @@ export class Graph<P extends object = any> extends GraphObject<P> {
         return imported;
     }
 
-    private _importSubset(node: GraphNode<P>, depth: number, excludeSchema: boolean, seen: Set<GraphNode<P>>) {
+    private _importSubset(node: GraphNode, depth: number, excludeSchema: boolean, seen: Set<GraphNode>) {
         if (node.owner === this) return node;
         if (!excludeSchema) this.copySchemas(node.owner);
         if (seen.has(node)) return this.nodes.get(node.id)!;

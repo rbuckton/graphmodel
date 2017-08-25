@@ -23,16 +23,16 @@ import { Graph } from "./graph";
 /**
  * Represents a link between two nodes in the graph.
  */
-export class GraphLink<P extends object = any> extends GraphObject<P> {
+export class GraphLink extends GraphObject {
     /**
      * The source of the link.
      */
-    public readonly source: GraphNode<P>;
+    public readonly source: GraphNode;
 
     /**
      * The target of the link.
      */
-    public readonly target: GraphNode<P>;
+    public readonly target: GraphNode;
 
     /**
      * An optional index for the link (default `0`).
@@ -40,11 +40,11 @@ export class GraphLink<P extends object = any> extends GraphObject<P> {
     public readonly index: number;
 
     /*@internal*/
-    public static _create<P extends object>(owner: Graph<P>, source: GraphNode<P>, target: GraphNode<P>, index: number, category?: GraphCategory<P>) {
-        return new GraphLink<P>(owner, source, target, index, category);
+    public static _create(owner: Graph, source: GraphNode, target: GraphNode, index: number, category?: GraphCategory) {
+        return new GraphLink(owner, source, target, index, category);
     }
 
-    private constructor(owner: Graph<P>, source: GraphNode<P>, target: GraphNode<P>, index: number, category?: GraphCategory<P>) {
+    private constructor(owner: Graph, source: GraphNode, target: GraphNode, index: number, category?: GraphCategory) {
         super(owner, category);
         this.source = this.owner.importNode(source);
         this.target = this.owner.importNode(target);
@@ -69,12 +69,12 @@ export class GraphLink<P extends object = any> extends GraphObject<P> {
      * @param searchDirection Either `"source"` to find related links across the incoming links of sources, or `"target"` to find related links across the outgoing links of targets.
      * @param traversal An object that specifies callbacks used to control how links are traversed and which links are yielded during iteration.
      */
-    public * related(searchDirection: "source" | "target", traversal: GraphLinkTraversal<P> = { }) {
+    public * related(searchDirection: "source" | "target", traversal: GraphLinkTraversal = { }) {
         const { traverseLink, acceptLink } = traversal;
-        const accepted = new Set<GraphLink<P>>();
-        const traversed = new Set<GraphLink<P>>([this]);
-        const traversalQueue: GraphLink<P>[] = [this];
-        let link: GraphLink<P> | undefined;
+        const accepted = new Set<GraphLink>();
+        const traversed = new Set<GraphLink>([this]);
+        const traversalQueue: GraphLink[] = [this];
+        let link: GraphLink | undefined;
         while (link = traversalQueue.shift()) {
             const links = searchDirection === "source" ? link.source.incomingLinks() : link.target.outgoingLinks();
             for (const link of links) {
@@ -91,14 +91,14 @@ export class GraphLink<P extends object = any> extends GraphObject<P> {
     }
 }
 
-export interface GraphLinkTraversal<P extends object = any> {
+export interface GraphLinkTraversal {
     /**
      * A callback used to determine whether a link should be traversed. If not specified, all links are traversed.
      */
-    traverseLink?: (this: void, link: GraphLink<P>) => boolean;
+    traverseLink?: (this: void, link: GraphLink) => boolean;
 
     /**
      * A callback used to determine whether a link should be yielded. If not specified, all links are yielded.
      */
-    acceptLink?: (this: void, link: GraphLink<P>) => boolean;
+    acceptLink?: (this: void, link: GraphLink) => boolean;
 }

@@ -17,7 +17,7 @@
 /**
  * Graph catagories are used to categorize graph objects such as nodes or links.
  */
-export class GraphCategory<P extends object = any> {
+export class GraphCategory {
     /**
      * Gets the unique id of the category.
      */
@@ -26,8 +26,8 @@ export class GraphCategory<P extends object = any> {
     private _basedOn: GraphCategory | undefined;
 
     /*@internal*/
-    public static _create<P extends object>(id: string) {
-        return new GraphCategory<P>(id);
+    public static _create(id: string) {
+        return new GraphCategory(id);
     }
 
     private constructor(id: string) {
@@ -48,14 +48,14 @@ export class GraphCategory<P extends object = any> {
     /**
      * Determines whether this category is based on the specified category.
      */
-    public isBasedOn(category: string | GraphCategory<P>) {
+    public isBasedOn(category: string | GraphCategory) {
         if (typeof category === "string") {
-            for (let base: GraphCategory<P> | undefined = this; base; base = base.basedOn) {
+            for (let base: GraphCategory | undefined = this; base; base = base.basedOn) {
                 if (base.id === category) return true;
             }
         }
         else {
-            for (let base: GraphCategory<P> | undefined = this; base; base = base.basedOn) {
+            for (let base: GraphCategory | undefined = this; base; base = base.basedOn) {
                 if (base === category) return true;
             }
         }

@@ -23,21 +23,21 @@ import { Graph } from "./graph";
 /**
  * Represents a node in the directed graph.
  */
-export class GraphNode<P extends object = any> extends GraphObject<P> {
+export class GraphNode extends GraphObject {
     /**
      * The unique identifier for the node.
      */
     public readonly id: string;
 
-    private _incomingLinks: Set<GraphLink<P>> | undefined;
-    private _outgoingLinks: Set<GraphLink<P>> | undefined;
+    private _incomingLinks: Set<GraphLink> | undefined;
+    private _outgoingLinks: Set<GraphLink> | undefined;
 
     /*@internal*/
-    public static _create<P extends object>(owner: Graph<P>, id: string, category?: GraphCategory<P>) {
+    public static _create(owner: Graph, id: string, category?: GraphCategory) {
         return new GraphNode(owner, id, category);
     }
 
-    private constructor(owner: Graph<P>, id: string, category?: GraphCategory<P>) {
+    private constructor(owner: Graph, id: string, category?: GraphCategory) {
         super(owner, category);
         this.id = id;
     }
@@ -70,7 +70,7 @@ export class GraphNode<P extends object = any> extends GraphObject<P> {
     /**
      * Creates an iterator for links that have this node as their target.
      */
-    public * incomingLinks(...linkCategories: GraphCategory<P>[]) {
+    public * incomingLinks(...linkCategories: GraphCategory[]) {
         if (this._incomingLinks) {
             if (linkCategories.length) {
                 const set = new Set(linkCategories);
@@ -89,7 +89,7 @@ export class GraphNode<P extends object = any> extends GraphObject<P> {
     /**
      * Creates an iterator for links that have this node as their source.
      */
-    public * outgoingLinks(...linkCategories: GraphCategory<P>[]) {
+    public * outgoingLinks(...linkCategories: GraphCategory[]) {
         if (this._outgoingLinks) {
             if (linkCategories.length) {
                 const set = new Set(linkCategories);
@@ -108,7 +108,7 @@ export class GraphNode<P extends object = any> extends GraphObject<P> {
     /**
      * Creates an iterator for links that have this node as either their source or their target.
      */
-    public * links(...linkCategories: GraphCategory<P>[]) {
+    public * links(...linkCategories: GraphCategory[]) {
         if (this._incomingLinks || this._outgoingLinks) {
             if (linkCategories.length) {
                 const set = new Set(linkCategories);
@@ -145,7 +145,7 @@ export class GraphNode<P extends object = any> extends GraphObject<P> {
      * @param searchDirection Either `"source"` to find related links across the incoming links of sources, or `"target"` to find related links across the outgoing links of targets.
      * @param traversal An object that specifies callbacks used to control how nodes and links are traversed and which node should be returned.
      */
-    public firstRelated(searchDirection: "source" | "target", traversal?: GraphNodeTraversal<P>) {
+    public firstRelated(searchDirection: "source" | "target", traversal?: GraphNodeTraversal) {
         for (const node of this.related(searchDirection, traversal)) {
             return node;
         }
@@ -156,11 +156,11 @@ export class GraphNode<P extends object = any> extends GraphObject<P> {
      * @param searchDirection Either `"source"` to find related links across the incoming links of sources, or `"target"` to find related links across the outgoing links of targets.
      * @param traversal An object that specifies callbacks used to control how nodes and links are traversed and which nodes are yielded during iteration.
      */
-    public * related(searchDirection: "source" | "target", { traverseLink, traverseNode, acceptNode }: GraphNodeTraversal<P> = {}) {
-        const accepted = new Set<GraphNode<P>>();
-        const traversed = new Set<GraphNode<P>>([this]);
-        const traversalQueue: GraphNode<P>[] = [this];
-        let node: GraphNode<P> | undefined;
+    public * related(searchDirection: "source" | "target", { traverseLink, traverseNode, acceptNode }: GraphNodeTraversal = {}) {
+        const accepted = new Set<GraphNode>();
+        const traversed = new Set<GraphNode>([this]);
+        const traversalQueue: GraphNode[] = [this];
+        let node: GraphNode | undefined;
         while (node = traversalQueue.shift()) {
             const links = searchDirection === "source" ? node._incomingLinks : node._outgoingLinks;
             if (links) {
@@ -184,7 +184,7 @@ export class GraphNode<P extends object = any> extends GraphObject<P> {
      * Creates an iterator for the sources linked to this node.
      * @param linkCategories When specified, links must have at least one of the provided categories.
      */
-    public * sources(...linkCategories: GraphCategory<P>[]) {
+    public * sources(...linkCategories: GraphCategory[]) {
         if (this._incomingLinks) {
             const set = linkCategories.length && new Set(linkCategories);
             for (const link of this._incomingLinks) {
@@ -199,7 +199,7 @@ export class GraphNode<P extends object = any> extends GraphObject<P> {
      * Creates an iterator for the targets linked to this node.
      * @param linkCategories When specified, links must have at least one of the provided categories.
      */
-    public * targets(...linkCategories: GraphCategory<P>[]) {
+    public * targets(...linkCategories: GraphCategory[]) {
         if (this._outgoingLinks) {
             const set = linkCategories.length && new Set(linkCategories);
             for (const link of this._outgoingLinks) {
@@ -232,38 +232,38 @@ export class GraphNode<P extends object = any> extends GraphObject<P> {
     }
 
     /*@internal*/
-    public _addLink(link: GraphLink<P>) {
+    public _addLink(link: GraphLink) {
         if (link.target === this) {
-            if (!this._incomingLinks) this._incomingLinks = new Set<GraphLink<P>>()
+            if (!this._incomingLinks) this._incomingLinks = new Set<GraphLink>()
             this._incomingLinks.add(link);
         }
 
         if (link.source === this) {
-            if (!this._outgoingLinks) this._outgoingLinks = new Set<GraphLink<P>>();
+            if (!this._outgoingLinks) this._outgoingLinks = new Set<GraphLink>();
             this._outgoingLinks.add(link);
         }
     }
 
     /*@internal*/
-    public _removeLink(link: GraphLink<P>) {
+    public _removeLink(link: GraphLink) {
         if (this._incomingLinks && link.target === this) this._incomingLinks.delete(link);
         if (this._outgoingLinks && link.source === this) this._outgoingLinks.delete(link);
     }
 }
 
-export interface GraphNodeTraversal<P extends object = any> {
+export interface GraphNodeTraversal {
     /**
      * A callback used to determine whether a link should be traversed. If not specified, all links are traversed.
      */
-    traverseLink?: (link: GraphLink<P>) => boolean;
+    traverseLink?: (link: GraphLink) => boolean;
 
     /**
      * A callback used to determine whether a node should be traversed. If not specified, all nodes are traversed.
      */
-    traverseNode?: (node: GraphNode<P>) => boolean;
+    traverseNode?: (node: GraphNode) => boolean;
 
     /**
      * A callback used to determine whether a node should be yielded. If not specified, all nodes are yielded.
      */
-    acceptNode?: (node: GraphNode<P>) => boolean;
+    acceptNode?: (node: GraphNode) => boolean;
 }

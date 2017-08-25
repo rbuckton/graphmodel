@@ -19,21 +19,21 @@ import { GraphSchema } from "./graphSchema";
 /**
  * A collection of child schemas in a schema.
  */
-export class GraphSchemaCollection<P extends object = any> {
+export class GraphSchemaCollection {
     /**
      * The schema that owns the collection.
      */
-    public readonly schema: GraphSchema<P>;
+    public readonly schema: GraphSchema;
 
     private _schemas: Map<string, GraphSchema> | undefined;
     private _observers: Map<GraphSchemaCollectionSubscription, GraphSchemaCollectionEvents> | undefined;
 
     /*@internal*/
-    public static _create<P extends object>(schema: GraphSchema<P>) {
-        return new GraphSchemaCollection<P>(schema);
+    public static _create(schema: GraphSchema) {
+        return new GraphSchemaCollection(schema);
     }
 
-    private constructor(schema: GraphSchema<P>) {
+    private constructor(schema: GraphSchema) {
         this.schema = schema;
     }
 
@@ -55,7 +55,7 @@ export class GraphSchemaCollection<P extends object = any> {
     /**
      * Determines whether the collection contains the specified schema.
      */
-    public has(schema: GraphSchema<P>) {
+    public has(schema: GraphSchema) {
         return this._schemas !== undefined
             && this._schemas.get(schema.name) === schema;
     }
@@ -71,7 +71,7 @@ export class GraphSchemaCollection<P extends object = any> {
     /**
      * Adds a schema to the collection.
      */
-    public add(schema: GraphSchema<P>) {
+    public add(schema: GraphSchema) {
         if (schema.hasSchema(this.schema)) throw new Error("Schemas cannot be circular.");
         if (!schema.graph) {
             if (!this._schemas) this._schemas = new Map<string, GraphSchema>();
@@ -106,11 +106,11 @@ export class GraphSchemaCollection<P extends object = any> {
     }
 }
 
-export interface GraphSchemaCollectionEvents<P extends object = any> {
+export interface GraphSchemaCollectionEvents {
     /**
      * An event raised when a schema is added to the collection.
      */
-    onAdded?: (schema: GraphSchema<P>) => void;
+    onAdded?: (schema: GraphSchema) => void;
 }
 
 export interface GraphSchemaCollectionSubscription {

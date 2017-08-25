@@ -24,11 +24,11 @@ import { Graph } from "./graph";
 /**
  * A GraphSchema defines a related set of graph categories and properties.
  */
-export class GraphSchema<P extends object = any> {
+export class GraphSchema {
     /**
      * Gets the graph that owns the schema.
      */
-    public readonly graph: Graph<P> | undefined;
+    public readonly graph: Graph | undefined;
 
     /**
      * Gets the name of the schema.
@@ -38,32 +38,26 @@ export class GraphSchema<P extends object = any> {
     /**
      * Gets the child schemas of this schema.
      */
-    public readonly schemas = GraphSchemaCollection._create<P>(this);
+    public readonly schemas = GraphSchemaCollection._create(this);
 
     /**
      * Gets the categories defined by this schema.
      */
-    public readonly categories = GraphCategoryCollection._create<P>(this);
+    public readonly categories = GraphCategoryCollection._create(this);
 
     /**
      * Gets the properties defined by this schema.
      */
-    public readonly properties = GraphPropertyCollection._create<P>(this);
+    public readonly properties = GraphPropertyCollection._create(this);
 
-    /**
-     * The underlying data type for the properties in the schema. This will never have a value and is only used for type checking and type inference purposes.
-     */
-    public readonly ["[[Properties]]"]: P;
-
-    constructor(name: string, ...schemas: GraphSchema<P>[]) {
+    constructor(name: string) {
         this.name = name;
-        for (const schema of schemas) this.addSchema(schema);
     }
 
     /**
      * Determines whether this schema contains the provided schema as a child or grandchild.
      */
-    public hasSchema(schema: GraphSchema<P>) {
+    public hasSchema(schema: GraphSchema) {
         if (schema === this) return true;
         for (const value of this.schemas.values()) if (value.hasSchema(schema)) return true;
         return false;
@@ -72,7 +66,7 @@ export class GraphSchema<P extends object = any> {
     /**
      * Adds a child schema to this schema.
      */
-    public addSchema(schema: GraphSchema<P>) {
+    public addSchema(schema: GraphSchema) {
         this.schemas.add(schema);
         return this;
     }
@@ -80,7 +74,7 @@ export class GraphSchema<P extends object = any> {
     /**
      * Creates an iterator for all schemas within this schema (including this schema).
      */
-    public * allSchemas(): IterableIterator<GraphSchema<P>> {
+    public * allSchemas(): IterableIterator<GraphSchema> {
         yield this;
         for (const schema of this.schemas) {
             yield* schema.allSchemas();
@@ -110,7 +104,7 @@ export class GraphSchema<P extends object = any> {
     /**
      * Finds a property in this schema or its descendants.
      */
-    public findProperty<K extends keyof P>(id: K) {
+    public findProperty<K extends string>(id: K) {
         for (const schema of this.allSchemas()) {
             const property = schema.properties.get(id);
             if (property) return property;
@@ -121,7 +115,7 @@ export class GraphSchema<P extends object = any> {
     /**
      * Creates an iterator for the properties in this schema or its descendants with the provided ids.
      */
-    public * findProperties<K extends keyof P>(...propertyIds: K[]) {
+    public * findProperties<K extends string>(...propertyIds: K[]) {
         for (const schema of this.allSchemas()) {
             yield* schema.properties.values(propertyIds);
         }

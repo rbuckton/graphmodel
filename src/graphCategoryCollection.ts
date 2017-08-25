@@ -20,21 +20,21 @@ import { GraphCategory } from "./graphCategory";
 /**
  * A collection of graph categories in a schema.
  */
-export class GraphCategoryCollection<P extends object = any> {
+export class GraphCategoryCollection {
     /**
      * Gets the schema that owns the collection.
      */
-    public readonly schema: GraphSchema<P>;
+    public readonly schema: GraphSchema;
 
-    private _categories: Map<string, GraphCategory<P>> | undefined;
-    private _observers: Map<GraphCategoryCollectionSubscription, GraphCategoryCollectionEvents<P>> | undefined;
+    private _categories: Map<string, GraphCategory> | undefined;
+    private _observers: Map<GraphCategoryCollectionSubscription, GraphCategoryCollectionEvents> | undefined;
 
     /*@internal*/
-    public static _create<P extends object>(schema: GraphSchema<P>) {
-        return new GraphCategoryCollection<P>(schema);
+    public static _create(schema: GraphSchema) {
+        return new GraphCategoryCollection(schema);
     }
 
-    private constructor(schema: GraphSchema<P>) {
+    private constructor(schema: GraphSchema) {
         this.schema = schema;
     }
 
@@ -46,8 +46,8 @@ export class GraphCategoryCollection<P extends object = any> {
     /**
      * Creates a subscription for a set of named events.
      */
-    public subscribe(events: GraphCategoryCollectionEvents<P>) {
-        const observers = this._observers || (this._observers = new Map<GraphCategoryCollectionSubscription, GraphCategoryCollectionEvents<P>>());
+    public subscribe(events: GraphCategoryCollectionEvents) {
+        const observers = this._observers || (this._observers = new Map<GraphCategoryCollectionSubscription, GraphCategoryCollectionEvents>());
         const subscription: GraphCategoryCollectionSubscription = { unsubscribe: () => { observers.delete(subscription); } };
         this._observers.set(subscription, { ...events });
         return subscription;
@@ -56,7 +56,7 @@ export class GraphCategoryCollection<P extends object = any> {
     /**
      * Determines whether the collection contains the specified category.
      */
-    public has(category: GraphCategory<P>) {
+    public has(category: GraphCategory) {
         return this._categories !== undefined
             && this._categories.get(category.id) === category;
     }
@@ -81,8 +81,8 @@ export class GraphCategoryCollection<P extends object = any> {
     /**
      * Adds a category to the collection.
      */
-    public add(category: GraphCategory<P>) {
-        if (!this._categories) this._categories = new Map<string, GraphCategory<P>>();
+    public add(category: GraphCategory) {
+        if (!this._categories) this._categories = new Map<string, GraphCategory>();
         this._categories.set(category.id, category);
         this._raiseOnAdded(category);
         return this;
@@ -91,7 +91,7 @@ export class GraphCategoryCollection<P extends object = any> {
     /**
      * Removes a category from the collection.
      */
-    public delete(category: GraphCategory<P>) {
+    public delete(category: GraphCategory) {
         if (this._categories) {
             const ownCategory = this._categories.get(category.id);
             if (ownCategory) {
@@ -115,11 +115,11 @@ export class GraphCategoryCollection<P extends object = any> {
     }
 
     /*@internal*/
-    public values(categoryIds: Iterable<string>): IterableIterator<GraphCategory<P>>;
+    public values(categoryIds: Iterable<string>): IterableIterator<GraphCategory>;
     /**
      * Creates an iterator for the values in the collection.
      */
-    public values(): IterableIterator<GraphCategory<P>>;
+    public values(): IterableIterator<GraphCategory>;
     public * values(categoryIds?: Iterable<string>) {
         if (this._categories) {
             if (categoryIds) {
@@ -144,11 +144,11 @@ export class GraphCategoryCollection<P extends object = any> {
     /**
      * Creates an iterator for the categories in the collection based on the provided base category.
      */
-    public * basedOn(base: GraphCategory<P>) {
+    public * basedOn(base: GraphCategory) {
         for (const category of this) if (category.isBasedOn(base)) yield category;
     }
 
-    private _raiseOnAdded(category: GraphCategory<P>) {
+    private _raiseOnAdded(category: GraphCategory) {
         if (this._observers) {
             for (const { onAdded } of this._observers.values()) {
                 if (onAdded) {
@@ -158,7 +158,7 @@ export class GraphCategoryCollection<P extends object = any> {
         }
     }
 
-    private _raiseOnDeleted(category: GraphCategory<P>) {
+    private _raiseOnDeleted(category: GraphCategory) {
         if (this._observers) {
             for (const { onDeleted } of this._observers.values()) {
                 if (onDeleted) {
@@ -169,16 +169,16 @@ export class GraphCategoryCollection<P extends object = any> {
     }
 }
 
-export interface GraphCategoryCollectionEvents<P extends object = any> {
+export interface GraphCategoryCollectionEvents {
     /**
      * An event raised when a category is added to the collection.
      */
-    onAdded?: (category: GraphCategory<P>) => void;
+    onAdded?: (category: GraphCategory) => void;
 
     /**
      * An event raised when a category is removed from the collection.
      */
-    onDeleted?: (category: GraphCategory<P>) => void;
+    onDeleted?: (category: GraphCategory) => void;
 }
 
 export interface GraphCategoryCollectionSubscription {

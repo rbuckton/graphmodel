@@ -20,21 +20,21 @@ import { GraphProperty } from "./graphProperty";
 /**
  * A collection of graph properties in a schema.
  */
-export class GraphPropertyCollection<P extends object = any> {
+export class GraphPropertyCollection {
     /**
      * Gets the schema that owns the collection.
      */
-    public readonly schema: GraphSchema<P>;
+    public readonly schema: GraphSchema;
 
-    private _properties: Map<string, GraphProperty<P, keyof P>> | undefined;
+    private _properties: Map<string, GraphProperty> | undefined;
     private _observers: Map<GraphPropertyCollectionSubscription, GraphPropertyCollectionEvents> | undefined;
 
     /*@internal*/
-    public static _create<P extends object>(schema: GraphSchema<P>) {
-        return new GraphPropertyCollection<P>(schema);
+    public static _create(schema: GraphSchema) {
+        return new GraphPropertyCollection(schema);
     }
 
-    private constructor(schema: GraphSchema<P>) {
+    private constructor(schema: GraphSchema) {
         this.schema = schema;
     }
 
@@ -46,7 +46,7 @@ export class GraphPropertyCollection<P extends object = any> {
     /**
      * Creates a subscription for a set of named events.
      */
-    public subscribe(events: GraphPropertyCollectionEvents<P>) {
+    public subscribe(events: GraphPropertyCollectionEvents) {
         const observers = this._observers || (this._observers = new Map<GraphPropertyCollectionSubscription, GraphPropertyCollectionEvents>());
         const subscription: GraphPropertyCollectionSubscription = { unsubscribe: () => { observers.delete(subscription); } };
         this._observers.set(subscription, { ...events });
@@ -56,7 +56,7 @@ export class GraphPropertyCollection<P extends object = any> {
     /**
      * Determines whether the collection contains the specified property.
      */
-    public has(property: GraphProperty<P>) {
+    public has(property: GraphProperty) {
         return this._properties !== undefined
             && this._properties.get(property.id) === property;
     }
@@ -64,25 +64,25 @@ export class GraphPropertyCollection<P extends object = any> {
     /**
      * Gets the property with the specified id.
      */
-    public get<K extends keyof P>(id: K) {
+    public get(id: string) {
         return this._properties
-            && this._properties.get(id) as GraphProperty<P, K> | undefined;
+            && this._properties.get(id) as GraphProperty | undefined;
     }
 
     /**
      * Gets the property with the specified id. If one does not exist, a new property is created.
      */
-    public getOrCreate<K extends keyof P>(id: K) {
+    public getOrCreate<V = any>(id: string) {
         let property = this.get(id);
         if (!property) this.add(property = GraphProperty._create(id));
-        return property as GraphProperty<P, K>;
+        return property as GraphProperty<V>;
     }
 
     /**
      * Adds a property to the collection.
      */
-    public add<K extends keyof P>(property: GraphProperty<P, K>) {
-        if (!this._properties) this._properties = new Map<string, GraphProperty<P, keyof P>>();
+    public add(property: GraphProperty) {
+        if (!this._properties) this._properties = new Map<string, GraphProperty>();
         this._properties.set(property.id, property);
         this._raiseOnAdded(property);
         return this;
@@ -117,10 +117,10 @@ export class GraphPropertyCollection<P extends object = any> {
     /**
      * Gets the properties in the collection.
      */
-    public values(): IterableIterator<GraphProperty<P, keyof P>>;
+    public values(): IterableIterator<GraphProperty>;
     /*@internal*/
-    public values<K extends keyof P>(propertyIds: Iterable<K>): IterableIterator<GraphProperty<P, K>>;
-    public * values(propertyIds?: Iterable<keyof P>) {
+    public values(propertyIds: Iterable<string>): IterableIterator<GraphProperty>;
+    public * values(propertyIds?: Iterable<string>) {
         if (propertyIds) {
             for (const id of propertyIds) {
                 const property = this.get(id);
@@ -139,7 +139,7 @@ export class GraphPropertyCollection<P extends object = any> {
         return this.values();
     }
 
-    private _raiseOnAdded(property: GraphProperty<P, keyof P>) {
+    private _raiseOnAdded(property: GraphProperty) {
         if (this._observers) {
             for (const { onAdded } of this._observers.values()) {
                 if (onAdded) {
@@ -149,7 +149,7 @@ export class GraphPropertyCollection<P extends object = any> {
         }
     }
 
-    private _raiseOnDeleted(property: GraphProperty<P, keyof P>) {
+    private _raiseOnDeleted(property: GraphProperty) {
         if (this._observers) {
             for (const { onDeleted } of this._observers.values()) {
                 if (onDeleted) {
@@ -160,16 +160,16 @@ export class GraphPropertyCollection<P extends object = any> {
     }
 }
 
-export interface GraphPropertyCollectionEvents<P extends object = any> {
+export interface GraphPropertyCollectionEvents {
     /**
      * An event raised when a property is added to the collection.
      */
-    onAdded?: (category: GraphProperty<P, keyof P>) => void;
+    onAdded?: (category: GraphProperty) => void;
 
     /**
      * An event raised when a property is removed from the collection.
      */
-    onDeleted?: (category: GraphProperty<P, keyof P>) => void;
+    onDeleted?: (category: GraphProperty) => void;
 }
 
 export interface GraphPropertyCollectionSubscription {

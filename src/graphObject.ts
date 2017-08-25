@@ -17,18 +17,19 @@
 import { GraphSchema } from "./graphSchema";
 import { GraphCategory } from "./graphCategory";
 import { GraphProperty } from "./graphProperty";
+import { GraphNode } from "./graphNode";
 import { Graph } from "./graph";
 
 /**
  * The base definition of an extensible graph object.
  */
-export abstract class GraphObject<P extends object = any> {
-    private _owner: Graph<P> | undefined;
-    private _categories: Set<GraphCategory<P>> | undefined;
-    private _properties: Map<GraphProperty<P>, P[keyof P]> | undefined;
+export abstract class GraphObject {
+    private _owner: Graph | undefined;
+    private _categories: Set<GraphCategory> | undefined;
+    private _properties: Map<GraphProperty, any> | undefined;
     private _observers: Map<GraphObjectSubscription, GraphObjectEvents> | undefined;
 
-    constructor(owner?: Graph<P>, category?: GraphCategory<P>) {
+    constructor(owner?: Graph, category?: GraphCategory) {
         this._owner = owner;
         if (category) this.addCategory(category);
     }
@@ -56,7 +57,7 @@ export abstract class GraphObject<P extends object = any> {
     /**
      * Creates a subscription for a set of named events.
      */
-    public subscribe(events: GraphObjectEvents<P>) {
+    public subscribe(events: GraphObjectEvents) {
         const observers = this._observers || (this._observers = new Map<GraphObjectSubscription, GraphObjectEvents>());
         const subscription: GraphObjectSubscription = { unsubscribe: () => { observers.delete(subscription); } };
         this._observers.set(subscription, { ...events });
@@ -66,7 +67,7 @@ export abstract class GraphObject<P extends object = any> {
     /**
      * Determines whether the object has the specified category or categories.
      */
-    public hasCategory(category: string | GraphCategory<P> | Iterable<GraphCategory<P>>) {
+    public hasCategory(category: string | GraphCategory | Iterable<GraphCategory>) {
         if (!this._categories) {
             return false;
         }
@@ -87,17 +88,17 @@ export abstract class GraphObject<P extends object = any> {
      * Determines whether the object has any of the categories in the provided Set.
      * @param match Either `"exact"` to only match any category in the set, or `"inherited"` to match any category or any of its base categories in the set.
      */
-    public hasCategoryInSet(categorySet: ReadonlySet<GraphCategory<P>>, match: "exact" | "inherited") {
+    public hasCategoryInSet(categorySet: ReadonlySet<GraphCategory>, match: "exact" | "inherited") {
         if (!this._categories) {
             return false;
         }
 
         if (match === "inherited") {
-            let inherited: Set<GraphCategory<P>> | undefined;
-            let category: GraphCategory<P> | undefined;
+            let inherited: Set<GraphCategory> | undefined;
+            let category: GraphCategory | undefined;
             for (category of categorySet) {
                 while (category) {
-                    if (!inherited) inherited = new Set<GraphCategory<P>>();
+                    if (!inherited) inherited = new Set<GraphCategory>();
                     inherited.add(category);
                     category = category.basedOn;
                 }
@@ -107,7 +108,7 @@ export abstract class GraphObject<P extends object = any> {
             }
         }
 
-        let category: GraphCategory<P> | undefined;
+        let category: GraphCategory | undefined;
         for (category of this._categories) {
             while (category) {
                 if (categorySet.has(category)) return true;
@@ -121,8 +122,8 @@ export abstract class GraphObject<P extends object = any> {
     /**
      * Adds a category to the object.
      */
-    public addCategory(category: GraphCategory<P>) {
-        if (!this._categories) this._categories = new Set<GraphCategory<P>>();
+    public addCategory(category: GraphCategory) {
+        if (!this._categories) this._categories = new Set<GraphCategory>();
         if (!this._categories.has(category)) {
             this._categories.add(category);
             this._raiseOnCategoryChanged("add", category);
@@ -133,7 +134,7 @@ export abstract class GraphObject<P extends object = any> {
     /**
      * Deletes a category from the object.
      */
-    public deleteCategory(category: GraphCategory<P>) {
+    public deleteCategory(category: GraphCategory) {
         if (this._categories && this._categories.delete(category)) {
             this._raiseOnCategoryChanged("delete", category);
             return true;
@@ -144,7 +145,7 @@ export abstract class GraphObject<P extends object = any> {
     /**
      * Determines whether the object has the specified property.
      */
-    public has<K extends keyof P>(key: K | GraphProperty<P, K>) {
+    public has(key: string | GraphProperty) {
         const property = typeof key === "string" ? this.owner!.schema.findProperty(key) : key;
         return property !== undefined
             && this._properties !== undefined
@@ -154,7 +155,9 @@ export abstract class GraphObject<P extends object = any> {
     /**
      * Gets the value for the specified property.
      */
-    public get<K extends keyof P>(key: K | GraphProperty<P, K>): P[K] | undefined {
+    public get<V>(key: GraphProperty<V>): V | undefined;
+    public get(key: string | GraphProperty): any;
+    public get(key: string | GraphProperty): any {
         const property = typeof key === "string" ? this.owner!.schema.findProperty(key) : key;
         return property
             && this._properties
@@ -164,7 +167,9 @@ export abstract class GraphObject<P extends object = any> {
     /**
      * Sets the value for the specified property.
      */
-    public set<K extends keyof P>(key: K | GraphProperty<P, K>, value: P[K]) {
+    public set<V>(key: GraphProperty<V>, value: V | undefined): this;
+    public set(key: string | GraphProperty, value: any): this;
+    public set(key: string | GraphProperty, value: any) {
         if (value === undefined || value === null) {
             this.delete(key);
             return this;
@@ -172,7 +177,7 @@ export abstract class GraphObject<P extends object = any> {
 
         const property = typeof key === "string" ? this.owner!.schema.findProperty(key) : key;
         if (property) {
-            if (!this._properties) this._properties = new Map<GraphProperty<P>, P[keyof P]>();
+            if (!this._properties) this._properties = new Map<GraphProperty, any>();
             this._properties.set(property, value);
             this._raiseOnPropertyChanged(property);
         }
@@ -182,7 +187,7 @@ export abstract class GraphObject<P extends object = any> {
     /**
      * Removes the specified property from the object.
      */
-    public delete<K extends keyof P>(key: K | GraphProperty<P, K>) {
+    public delete(key: string | GraphProperty) {
         const property = typeof key === "string" ? this.owner!.schema.findProperty(key) : key;
         if (property && this._properties && this._properties.delete(property)) {
             this._raiseOnPropertyChanged(property);
@@ -221,7 +226,7 @@ export abstract class GraphObject<P extends object = any> {
     }
 
     /*@internal*/
-    public _setOwner(owner: Graph<P>) {
+    public _setOwner(owner: Graph) {
         if (!this._owner) {
             this._owner = owner;
         }
@@ -234,7 +239,7 @@ export abstract class GraphObject<P extends object = any> {
     }
 
     /*@internal*/
-    public _raiseOnCategoryChanged(change: "add" | "delete", category: GraphCategory<P>) {
+    public _raiseOnCategoryChanged(change: "add" | "delete", category: GraphCategory) {
         if (this._observers) {
             for (const { onCategoryChanged } of this._observers.values()) {
                 if (onCategoryChanged) {
@@ -245,7 +250,7 @@ export abstract class GraphObject<P extends object = any> {
     }
 
     /*@internal*/
-    public _raiseOnPropertyChanged(property: GraphProperty<P, keyof P>) {
+    public _raiseOnPropertyChanged(property: GraphProperty) {
         if (this._observers) {
             for (const { onPropertyChanged } of this._observers.values()) {
                 if (onPropertyChanged) {
@@ -256,16 +261,16 @@ export abstract class GraphObject<P extends object = any> {
     }
 }
 
-export interface GraphObjectEvents<P extends object = any> {
+export interface GraphObjectEvents {
     /**
      * An event raised when a category is added or removed from an object.
      */
-    onCategoryChanged?: (change: "add" | "delete", category: GraphCategory<P>) => void;
+    onCategoryChanged?: (change: "add" | "delete", category: GraphCategory) => void;
 
     /**
      * An event raised when a property changes on the object.
      */
-    onPropertyChanged?: (name: keyof P) => void;
+    onPropertyChanged?: (name: string) => void;
 }
 
 export interface GraphObjectSubscription {

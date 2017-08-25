@@ -17,23 +17,23 @@
 /**
  * Graph properties are used to annotate graph objects such as nodes or links.
  */
-export class GraphProperty<P extends object = any, K extends keyof P = keyof P> {
+export class GraphProperty<V = any> {
     /**
      * The unique id of the property.
      */
-    public readonly id: K;
+    public readonly id: string;
 
     /**
      * The underlying data type of the property. This will never have a value and is only used for type checking and type inference purposes.
      */
-    public readonly ["[[DataType]]"]: P[K];
+    public readonly ["[[DataType]]"]: V;
 
     /*@internal*/
-    public static _create<P extends object, K extends keyof P>(id: K) {
-        return new GraphProperty<P, K>(id);
+    public static _create(id: string) {
+        return new GraphProperty(id);
     }
 
-    private constructor(id: K) {
+    private constructor(id: string) {
         this.id = id;
     }
 }

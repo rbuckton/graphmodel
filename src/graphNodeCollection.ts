@@ -23,21 +23,21 @@ import { Graph } from "./graph";
 /**
  * A collection of nodes within a Graph.
  */
-export class GraphNodeCollection<P extends object = any> {
+export class GraphNodeCollection {
     /**
      * Gets the graph to which this collection belongs.
      */
-    public readonly graph: Graph<P>;
+    public readonly graph: Graph;
 
-    private _nodes: Map<string, GraphNode<P>> | undefined;
-    private _observers: Map<GraphNodeCollectionSubscription, GraphNodeCollectionEvents<P>> | undefined;
+    private _nodes: Map<string, GraphNode> | undefined;
+    private _observers: Map<GraphNodeCollectionSubscription, GraphNodeCollectionEvents> | undefined;
 
     /*@internal*/
-    public static _create<P extends object>(graph: Graph<P>) {
+    public static _create(graph: Graph) {
         return new GraphNodeCollection(graph);
     }
 
-    private constructor(graph: Graph<P>) {
+    private constructor(graph: Graph) {
         this.graph = graph;
     }
 
@@ -49,8 +49,8 @@ export class GraphNodeCollection<P extends object = any> {
     /**
      * Creates a subscription for a set of named events.
      */
-    public subscribe(events: GraphNodeCollectionEvents<P>) {
-        const observers = this._observers || (this._observers = new Map<GraphNodeCollectionSubscription, GraphNodeCollectionEvents<P>>());
+    public subscribe(events: GraphNodeCollectionEvents) {
+        const observers = this._observers || (this._observers = new Map<GraphNodeCollectionSubscription, GraphNodeCollectionEvents>());
         const subscription: GraphNodeCollectionSubscription = { unsubscribe: () => { observers.delete(subscription); } };
         this._observers.set(subscription, { ...events });
         return subscription;
@@ -59,7 +59,7 @@ export class GraphNodeCollection<P extends object = any> {
     /**
      * Determines whether the collection contains the specified npde.
      */
-    public has(node: GraphNode<P>) {
+    public has(node: GraphNode) {
         return this._nodes !== undefined
             && this._nodes.get(node.id) === node;
     }
@@ -75,7 +75,7 @@ export class GraphNodeCollection<P extends object = any> {
     /**
      * Gets the node with the provided id. If it does not exist, a new node is created.
      */
-    public getOrCreate(id: string, category?: GraphCategory<P>) {
+    public getOrCreate(id: string, category?: GraphCategory) {
         let node = this.get(id);
         if (!node) {
             node = GraphNode._create(this.graph, id, category);
@@ -91,13 +91,13 @@ export class GraphNodeCollection<P extends object = any> {
     /**
      * Adds a node to the collection.
      */
-    public add(node: GraphNode<P>) {
+    public add(node: GraphNode) {
         const ownNode = this.get(node.id);
         if (ownNode) {
             if (ownNode !== node) throw new Error(`A node with the id '${node.id}' already exists.`);
         }
         else if (this.graph.importNode(node) === node) {
-            if (!this._nodes) this._nodes = new Map<string, GraphNode<P>>();
+            if (!this._nodes) this._nodes = new Map<string, GraphNode>();
             this._nodes.set(node.id, node);
             if (node.linkCount) {
                 for (const link of node.links()) {
@@ -114,12 +114,12 @@ export class GraphNodeCollection<P extends object = any> {
     /**
      * Removes a node from the collection.
      */
-    public delete(node: GraphNode<P>): boolean;
+    public delete(node: GraphNode): boolean;
     /**
      * Removes the node with the specified id from the collection.
      */
-    public delete(nodeId: string): GraphNode<P>;
-    public delete(node: string | GraphNode<P>) {
+    public delete(nodeId: string): GraphNode;
+    public delete(node: string | GraphNode) {
         if (this._nodes) {
             const nodeId = typeof node === "string" ? node : node.id;
             const ownNode = this._nodes.get(nodeId);
@@ -175,14 +175,19 @@ export class GraphNodeCollection<P extends object = any> {
     /**
      * Creates an iterator for each node with the specified property key and value.
      */
-    public * byProperty<K extends keyof P>(key: K | GraphProperty<P, K>, value: P[K]) {
+    public byProperty<V>(key: GraphProperty<V>, value: V): IterableIterator<GraphNode>;
+    /**
+     * Creates an iterator for each node with the specified property key and value.
+     */
+    public byProperty(key: string | GraphProperty, value: any): IterableIterator<GraphNode>;
+    public * byProperty(key: string | GraphProperty, value: any) {
         for (const node of this) if (node.get(key) === value) yield node;
     }
 
     /**
      * Creates an iterator for each node with any of the specified categories.
      */
-    public * byCategory(...categories: GraphCategory<P>[]) {
+    public * byCategory(...categories: GraphCategory[]) {
         const set = categories.length && new Set(categories);
         for (const node of this) if (!set || node.hasCategory(set)) yield node;
     }
@@ -190,11 +195,11 @@ export class GraphNodeCollection<P extends object = any> {
     /**
      * Creates an iterator for each node matching the provided callback.
      */
-    public * filter(cb: (node: GraphNode<P>) => boolean) {
+    public * filter(cb: (node: GraphNode) => boolean) {
         for (const node of this) if (cb(node)) yield node;
     }
 
-    private _raiseOnAdded(node: GraphNode<P>) {
+    private _raiseOnAdded(node: GraphNode) {
         if (this._observers) {
             for (const { onAdded } of this._observers.values()) {
                 if (onAdded) {
@@ -204,7 +209,7 @@ export class GraphNodeCollection<P extends object = any> {
         }
     }
 
-    private _raiseOnDeleted(node: GraphNode<P>) {
+    private _raiseOnDeleted(node: GraphNode) {
         if (this._observers) {
             for (const { onDeleted } of this._observers.values()) {
                 if (onDeleted) {
@@ -215,16 +220,16 @@ export class GraphNodeCollection<P extends object = any> {
     }
 }
 
-export interface GraphNodeCollectionEvents<P extends object = any> {
+export interface GraphNodeCollectionEvents {
     /**
      * An event raised when a node is added to the collection.
      */
-    onAdded?: (node: GraphNode<P>) => void;
+    onAdded?: (node: GraphNode) => void;
 
     /**
      * An event raised when a node is removed from the collection.
      */
-    onDeleted?: (node: GraphNode<P>) => void;
+    onDeleted?: (node: GraphNode) => void;
 }
 
 export interface GraphNodeCollectionSubscription {
