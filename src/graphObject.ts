@@ -146,7 +146,7 @@ export abstract class GraphObject {
      * Determines whether the object has the specified property.
      */
     public has(key: string | GraphProperty) {
-        const property = typeof key === "string" ? this.owner!.schema.findProperty(key) : key;
+        const property = typeof key === "string" ? this.schema && this.schema.findProperty(key) : key;
         return property !== undefined
             && this._properties !== undefined
             && this._properties.has(property);
@@ -158,7 +158,7 @@ export abstract class GraphObject {
     public get<V>(key: GraphProperty<V>): V | undefined;
     public get(key: string | GraphProperty): any;
     public get(key: string | GraphProperty): any {
-        const property = typeof key === "string" ? this.owner!.schema.findProperty(key) : key;
+        const property = typeof key === "string" ? this.schema && this.schema.findProperty(key) : key;
         return property
             && this._properties
             && this._properties.get(property);
@@ -175,12 +175,13 @@ export abstract class GraphObject {
             return this;
         }
 
-        const property = typeof key === "string" ? this.owner!.schema.findProperty(key) : key;
+        const property = typeof key === "string" ? this.schema && this.schema.findProperty(key) : key;
         if (property) {
             if (!this._properties) this._properties = new Map<GraphProperty, any>();
             this._properties.set(property, value);
             this._raiseOnPropertyChanged(property);
         }
+
         return this;
     }
 
@@ -188,13 +189,50 @@ export abstract class GraphObject {
      * Removes the specified property from the object.
      */
     public delete(key: string | GraphProperty) {
-        const property = typeof key === "string" ? this.owner!.schema.findProperty(key) : key;
+        const property = typeof key === "string" ? this.schema && this.schema.findProperty(key) : key;
         if (property && this._properties && this._properties.delete(property)) {
             this._raiseOnPropertyChanged(property);
-            return false;
+            return true;
         }
 
-        return true;
+        return false;
+    }
+
+    /**
+     * Copies the categories of another graph object to this one.
+     */
+    public copyCategories(other: GraphObject) {
+        let changed = false;
+        if (other._categories) {
+            if (!this._categories) this._categories = new Set<GraphCategory>();
+            for (const category of other._categories) {
+                if (!this._categories.has(category)) {
+                    this._categories.add(category);
+                    this._raiseOnCategoryChanged("add", category);
+                    changed = true;
+                }
+            }
+        }
+        return changed;
+    }
+
+    /**
+     * Copies the properties and values of another graph object to this one.
+     */
+    public copyProperties(other: GraphObject) {
+        let changed = false;
+        if (other._properties) {
+            if (!this._properties) this._properties = new Map<GraphProperty, any>();
+            for (const [property, value] of other._properties) {
+                const ownValue = this._properties.get(property);
+                if (ownValue !== value) {
+                    this._properties.set(property, value);
+                    this._raiseOnPropertyChanged(property);
+                    changed = true;
+                }
+            }
+        }
+        return changed;
     }
 
     /**
@@ -226,16 +264,11 @@ export abstract class GraphObject {
     }
 
     /*@internal*/
-    public _setOwner(owner: Graph) {
-        if (!this._owner) {
-            this._owner = owner;
-        }
-    }
-
-    /*@internal*/
-    public _merge(other: this) {
-        for (const category of other.categories()) this.addCategory(category);
-        for (const [key, value] of other) this.set(key, value);
+    public _mergeFrom(other: this) {
+        let changed = false;
+        if (this.copyProperties(other)) changed = true;
+        if (this.copyCategories(other)) changed = true;
+        return changed;
     }
 
     /*@internal*/

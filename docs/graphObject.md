@@ -3,16 +3,16 @@
 /**
  * The base definition of an extensible graph object.
  */
-export declare abstract class GraphObject<P extends object = any> {
-    constructor(owner?: Graph<P>, category?: GraphCategory<P>);
+export declare abstract class GraphObject {
+    constructor(owner?: Graph, category?: GraphCategory);
     /**
      * Gets the graph that this object belongs to.
      */
-    readonly owner: Graph<P> | undefined;
+    readonly owner: Graph | undefined;
     /**
      * Gets the document schema for this object.
      */
-    readonly schema: GraphSchema<P> | undefined;
+    readonly schema: GraphSchema | undefined;
     /**
      * Gets the number of categories in the object.
      */
@@ -24,66 +24,76 @@ export declare abstract class GraphObject<P extends object = any> {
     /**
      * Creates a subscription for a set of named events.
      */
-    subscribe(events: GraphObjectEvents<P>): GraphObjectSubscription;
+    subscribe(events: GraphObjectEvents): GraphObjectSubscription;
     /**
      * Determines whether the object has the specified category or categories.
      */
-    hasCategory(category: string | GraphCategory<P> | Iterable<GraphCategory<P>>): boolean;
+    hasCategory(category: string | GraphCategory | Iterable<GraphCategory>): boolean;
     /**
      * Determines whether the object has any of the categories in the provided Set.
      * @param match Either `"exact"` to only match any category in the set, or `"inherited"` to match any category or any of its base categories in the set.
      */
-    hasCategoryInSet(categorySet: ReadonlySet<GraphCategory<P>>, match: "exact" | "inherited"): boolean;
+    hasCategoryInSet(categorySet: ReadonlySet<GraphCategory>, match: "exact" | "inherited"): boolean;
     /**
      * Adds a category to the object.
      */
-    addCategory(category: GraphCategory<P>): this;
+    addCategory(category: GraphCategory): this;
     /**
      * Deletes a category from the object.
      */
-    deleteCategory(category: GraphCategory<P>): boolean;
+    deleteCategory(category: GraphCategory): boolean;
     /**
      * Determines whether the object has the specified property.
      */
-    has<K extends keyof P>(key: K | GraphProperty<P, K>): boolean;
+    has(key: string | GraphProperty): boolean;
     /**
      * Gets the value for the specified property.
      */
-    get<K extends keyof P>(key: K | GraphProperty<P, K>): P[K] | undefined;
+    get<V>(key: GraphProperty<V>): V | undefined;
+    get(key: string | GraphProperty): any;
     /**
      * Sets the value for the specified property.
      */
-    set<K extends keyof P>(key: K | GraphProperty<P, K>, value: P[K]): this;
+    set<V>(key: GraphProperty<V>, value: V | undefined): this;
+    set(key: string | GraphProperty, value: any): this;
     /**
      * Removes the specified property from the object.
      */
-    delete<K extends keyof P>(key: K | GraphProperty<P, K>): boolean;
+    delete(key: string | GraphProperty): boolean;
+    /**
+     * Copies the categories of another graph object to this one.
+     */
+    copyCategories(other: GraphObject): boolean;
+    /**
+     * Copies the properties and values of another graph object to this one.
+     */
+    copyProperties(other: GraphObject): boolean;
     /**
      * Creates an iterator for the properties in the object.
      */
-    keys(): IterableIterator<GraphProperty<P, keyof P>>;
+    keys(): IterableIterator<GraphProperty>;
     /**
      * Creates an iterator for the entries in the object.
      */
-    entries(): IterableIterator<[GraphProperty<P, keyof P>, P[keyof P]]>;
+    entries(): IterableIterator<[GraphProperty, any]>;
     /**
      * Creates an iterator for the categories in the object.
      */
-    categories(): IterableIterator<GraphCategory<P>>;
+    categories(): IterableIterator<GraphCategory>;
     /**
      * Creates an iterator for the entries in the object.
      */
-    [Symbol.iterator](): IterableIterator<[GraphProperty<P, keyof P>, P[keyof P]]>;
+    [Symbol.iterator](): IterableIterator<[GraphProperty, any]>;
 }
-export interface GraphObjectEvents<P extends object = any> {
+export interface GraphObjectEvents {
     /**
      * An event raised when a category is added or removed from an object.
      */
-    onCategoryChanged?: (change: "add" | "delete", category: GraphCategory<P>) => void;
+    onCategoryChanged?: (change: "add" | "delete", category: GraphCategory) => void;
     /**
      * An event raised when a property changes on the object.
      */
-    onPropertyChanged?: (name: keyof P) => void;
+    onPropertyChanged?: (name: string) => void;
 }
 export interface GraphObjectSubscription {
     /**

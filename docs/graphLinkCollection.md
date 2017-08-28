@@ -3,12 +3,12 @@
 /**
  * A collection of links within a Graph.
  */
-export declare class GraphLinkCollection<P extends object = any> {
+export declare class GraphLinkCollection {
     private constructor();
     /**
      * Gets the graph to which this collection belongs.
      */
-    readonly graph: Graph<P>;
+    readonly graph: Graph;
     /**
      * Gets the number of links in the collection.
      */
@@ -16,35 +16,35 @@ export declare class GraphLinkCollection<P extends object = any> {
     /**
      * Creates a subscription for a set of named events.
      */
-    subscribe(events: GraphLinkCollectionEvents<P>): GraphLinkCollectionSubscription;
+    subscribe(events: GraphLinkCollectionEvents): GraphLinkCollectionSubscription;
     /**
      * Determines whether the collection contains the specified link.
      */
-    has(link: GraphLink<P>): boolean;
+    has(link: GraphLink): boolean;
     /**
      * Gets the link for the provided source and target.
      */
-    get(sourceId: string, targetId: string, index?: number): GraphLink<P> | undefined;
+    get(sourceId: string, targetId: string, index?: number): GraphLink | undefined;
     /**
      * Gets the link for the provided source and target. If one is not found, a new link is created.
      */
-    getOrCreate(source: string | GraphNode<P>, target: string | GraphNode<P>, index?: number): GraphLink<P>;
+    getOrCreate(source: string | GraphNode, target: string | GraphNode, index?: number): GraphLink;
     /**
      * Gets the link for the provided source and target. If one is not found, a new link is created.
      */
-    getOrCreate(source: string | GraphNode<P>, target: string | GraphNode<P>, category: GraphCategory<P>): GraphLink<P>;
+    getOrCreate(source: string | GraphNode, target: string | GraphNode, category: GraphCategory): GraphLink;
     /**
      * Adds a link to the collection.
      */
-    add(link: GraphLink<P>): this;
+    add(link: GraphLink): this;
     /**
      * Removes a link from the collection.
      */
-    delete(link: GraphLink<P>): boolean;
+    delete(link: GraphLink): boolean;
     /**
      * Removes the link with the specified source, target, and category from the collection.
      */
-    delete(sourceId: string, targetId: string, category: GraphCategory<P>): GraphLink<P>;
+    delete(sourceId: string, targetId: string, category: GraphCategory): GraphLink;
     /**
      * Removes all links from the collection.
      */
@@ -52,45 +52,45 @@ export declare class GraphLinkCollection<P extends object = any> {
     /**
      * Creates an iterator for the values in the collection.
      */
-    values(): IterableIterator<GraphLink<P>>;
+    values(): IterableIterator<GraphLink>;
     /**
      * Creates an iterator for the values in the collection.
      */
-    [Symbol.iterator](): IterableIterator<GraphLink<P>>;
+    [Symbol.iterator](): IterableIterator<GraphLink>;
     /**
      * Creates an iterator for each link between a source and a target node.
      */
-    between(source: GraphNode<P>, target: GraphNode<P>): IterableIterator<GraphLink<P>>;
+    between(source: GraphNode, target: GraphNode): IterableIterator<GraphLink>;
     /**
      * Creates an iterator for each incoming link to a node.
      */
-    to(node: string | GraphNode<P>, ...categories: GraphCategory<P>[]): IterableIterator<GraphLink<P>>;
+    to(node: string | GraphNode, ...categories: GraphCategory[]): IterableIterator<GraphLink>;
     /**
      * Creates an iterator for each outgoing link from a node.
      */
-    from(node: string | GraphNode<P>, ...categories: GraphCategory<P>[]): IterableIterator<GraphLink<P>>;
+    from(node: string | GraphNode, ...categories: GraphCategory[]): IterableIterator<GraphLink>;
     /**
-     * Creates an iterator for each link with the specified property key and value.
+     * Creates an iterator for each node with the specified property key and value.
      */
-    byProperty<K extends keyof P>(key: K | GraphProperty<P, K>, value: P[K]): IterableIterator<GraphLink<P>>;
+    byProperty<V>(key: GraphProperty<V>, value: V): IterableIterator<GraphNode>;
     /**
      * Creates an iterator for each link with any of the specified categories.
      */
-    byCategory(...categories: GraphCategory<P>[]): IterableIterator<GraphLink<P>>;
+    byCategory(...categories: GraphCategory[]): IterableIterator<GraphLink>;
     /**
      * Creates an iterator for each link matching the provided callback.
      */
-    filter(cb: (link: GraphLink<P>) => boolean): IterableIterator<GraphLink<P>>;
+    filter(cb: (link: GraphLink) => boolean): IterableIterator<GraphLink>;
 }
-export interface GraphLinkCollectionEvents<P extends object = any> {
+export interface GraphLinkCollectionEvents {
     /**
      * An event raised when a link is added to the collection.
      */
-    onAdded?: (this: void, link: GraphLink<P>) => void;
+    onAdded?: (this: void, link: GraphLink) => void;
     /**
      * An event raised when a link is removed from the collection.
      */
-    onDeleted?: (this: void, link: GraphLink<P>) => void;
+    onDeleted?: (this: void, link: GraphLink) => void;
 }
 export interface GraphLinkCollectionSubscription {
     /**

@@ -18,15 +18,7 @@
  * Graph properties are used to annotate graph objects such as nodes or links.
  */
 export class GraphProperty<V = any> {
-    /**
-     * The unique id of the property.
-     */
-    public readonly id: string;
-
-    /**
-     * The underlying data type of the property. This will never have a value and is only used for type checking and type inference purposes.
-     */
-    public readonly ["[[DataType]]"]: V;
+    private _id: string;
 
     /*@internal*/
     public static _create(id: string) {
@@ -34,6 +26,16 @@ export class GraphProperty<V = any> {
     }
 
     private constructor(id: string) {
-        this.id = id;
+        this._id = id;
     }
+
+    /**
+     * The unique id of the property.
+     */
+    public get id() { return this._id; }
+
+    /**
+     * The underlying data type of the property. This will never have a value and is only used for type checking and type inference purposes.
+     */
+    public readonly ["[[DataType]]"]: V;
 }

@@ -24,11 +24,7 @@ import { Graph } from "./graph";
  * Represents a node in the directed graph.
  */
 export class GraphNode extends GraphObject {
-    /**
-     * The unique identifier for the node.
-     */
-    public readonly id: string;
-
+    private _id: string;
     private _incomingLinks: Set<GraphLink> | undefined;
     private _outgoingLinks: Set<GraphLink> | undefined;
 
@@ -39,7 +35,7 @@ export class GraphNode extends GraphObject {
 
     private constructor(owner: Graph, id: string, category?: GraphCategory) {
         super(owner, category);
-        this.id = id;
+        this._id = id;
     }
 
     /**
@@ -51,6 +47,11 @@ export class GraphNode extends GraphObject {
      * Gets the document schema for this object.
      */
     public get schema() { return this.owner.schema; }
+
+    /**
+     * The unique identifier for the node.
+     */
+    public get id() { return this._id; }
 
     /**
      * Gets the number of incoming links.
@@ -215,16 +216,16 @@ export class GraphNode extends GraphObject {
      */
     public copy(newId: string) {
         const node = new GraphNode(this.owner, newId);
-        node._merge(this);
+        node._mergeFrom(this);
         if (this._outgoingLinks) {
             for (const link of this._outgoingLinks) {
-                GraphLink._create(this.owner, node, link.target, link.index)._merge(link);
+                GraphLink._create(this.owner, node, link.target, link.index)._mergeFrom(link);
             }
         }
 
         if (this._incomingLinks) {
             for (const link of this._incomingLinks) {
-                GraphLink._create(this.owner, link.source, node, link.index)._merge(link);
+                GraphLink._create(this.owner, link.source, node, link.index)._mergeFrom(link);
             }
         }
 

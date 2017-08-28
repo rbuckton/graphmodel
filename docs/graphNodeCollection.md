@@ -3,12 +3,12 @@
 /**
  * A collection of nodes within a Graph.
  */
-export declare class GraphNodeCollection<P extends object = any> {
+export declare class GraphNodeCollection {
     private constructor();
     /**
      * Gets the graph to which this collection belongs.
      */
-    readonly graph: Graph<P>;
+    readonly graph: Graph;
     /**
      * Gets the number of nodes in the collection.
      */
@@ -16,31 +16,31 @@ export declare class GraphNodeCollection<P extends object = any> {
     /**
      * Creates a subscription for a set of named events.
      */
-    subscribe(events: GraphNodeCollectionEvents<P>): GraphNodeCollectionSubscription;
+    subscribe(events: GraphNodeCollectionEvents): GraphNodeCollectionSubscription;
     /**
      * Determines whether the collection contains the specified npde.
      */
-    has(node: GraphNode<P>): boolean;
+    has(node: GraphNode): boolean;
     /**
      * Gets the node with the provided id.
      */
-    get(id: string): GraphNode<P> | undefined;
+    get(id: string): GraphNode | undefined;
     /**
      * Gets the node with the provided id. If it does not exist, a new node is created.
      */
-    getOrCreate(id: string, category?: GraphCategory<P>): GraphNode<P>;
+    getOrCreate(id: string, category?: GraphCategory): GraphNode;
     /**
      * Adds a node to the collection.
      */
-    add(node: GraphNode<P>): this;
+    add(node: GraphNode): this;
     /**
      * Removes a node from the collection.
      */
-    delete(node: GraphNode<P>): boolean;
+    delete(node: GraphNode): boolean;
     /**
      * Removes the node with the specified id from the collection.
      */
-    delete(nodeId: string): GraphNode<P>;
+    delete(nodeId: string): GraphNode;
     /**
      * Removes all nodes from the collection.
      */
@@ -48,33 +48,33 @@ export declare class GraphNodeCollection<P extends object = any> {
     /**
      * Creates an iterator for the values in the collection.
      */
-    values(): IterableIterator<GraphNode<P>>;
+    values(): IterableIterator<GraphNode>;
     /**
      * Creates an iterator for the values in the collection.
      */
-    [Symbol.iterator](): IterableIterator<GraphNode<P>>;
+    [Symbol.iterator](): IterableIterator<GraphNode>;
     /**
      * Creates an iterator for each node with the specified property key and value.
      */
-    byProperty<K extends keyof P>(key: K | GraphProperty<P, K>, value: P[K]): IterableIterator<GraphNode<P>>;
+    byProperty<V>(key: GraphProperty<V>, value: V): IterableIterator<GraphNode>;
     /**
      * Creates an iterator for each node with any of the specified categories.
      */
-    byCategory(...categories: GraphCategory<P>[]): IterableIterator<GraphNode<P>>;
+    byCategory(...categories: GraphCategory[]): IterableIterator<GraphNode>;
     /**
      * Creates an iterator for each node matching the provided callback.
      */
-    filter(cb: (node: GraphNode<P>) => boolean): IterableIterator<GraphNode<P>>;
+    filter(cb: (node: GraphNode) => boolean): IterableIterator<GraphNode>;
 }
-export interface GraphNodeCollectionEvents<P extends object = any> {
+export interface GraphNodeCollectionEvents {
     /**
      * An event raised when a node is added to the collection.
      */
-    onAdded?: (node: GraphNode<P>) => void;
+    onAdded?: (node: GraphNode) => void;
     /**
      * An event raised when a node is removed from the collection.
      */
-    onDeleted?: (node: GraphNode<P>) => void;
+    onDeleted?: (node: GraphNode) => void;
 }
 export interface GraphNodeCollectionSubscription {
     /**

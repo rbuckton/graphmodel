@@ -18,11 +18,7 @@
  * Graph catagories are used to categorize graph objects such as nodes or links.
  */
 export class GraphCategory {
-    /**
-     * Gets the unique id of the category.
-     */
-    public readonly id: string;
-
+    private _id: string;
     private _basedOn: GraphCategory | undefined;
 
     /*@internal*/
@@ -31,8 +27,13 @@ export class GraphCategory {
     }
 
     private constructor(id: string) {
-        this.id = id;
+        this._id = id;
     }
+
+    /**
+     * Gets the unique id of the category.
+     */
+    public get id() { return this._id; }
 
     /**
      * Gets or sets the category this category is based on.

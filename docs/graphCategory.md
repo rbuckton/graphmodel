@@ -3,7 +3,7 @@
 /**
  * Graph catagories are used to categorize graph objects such as nodes or links.
  */
-export declare class GraphCategory<P extends object = any> {
+export declare class GraphCategory {
     private constructor();
     /**
      * Gets the unique id of the category.
@@ -16,7 +16,7 @@ export declare class GraphCategory<P extends object = any> {
     /**
      * Determines whether this category is based on the specified category.
      */
-    isBasedOn(category: string | GraphCategory<P>): boolean;
+    isBasedOn(category: string | GraphCategory): boolean;
 }
 ```
 

@@ -25,33 +25,54 @@ import { Graph } from "./graph";
  * A GraphSchema defines a related set of graph categories and properties.
  */
 export class GraphSchema {
+    private _graph: Graph | undefined;
+    private _name: string;
+    private _schemas: GraphSchemaCollection | undefined;
+    private _categories: GraphCategoryCollection | undefined;
+    private _properties: GraphPropertyCollection | undefined;
+    private _observers: Map<GraphSchemaSubscription, GraphSchemaEvents> | undefined;
+
+    /*@internal*/
+    constructor(name: string, graph: Graph);
+    constructor(name: string);
+    constructor(name: string, graph?: Graph) {
+        this._name = name;
+        this._graph = graph;
+    }
+
     /**
      * Gets the graph that owns the schema.
      */
-    public readonly graph: Graph | undefined;
+    public get graph() { return this._graph; }
 
     /**
      * Gets the name of the schema.
      */
-    public readonly name: string;
+    public get name() { return this._name; }
 
     /**
      * Gets the child schemas of this schema.
      */
-    public readonly schemas = GraphSchemaCollection._create(this);
+    public get schemas() { return this._schemas || (this._schemas = GraphSchemaCollection._create(this)); }
 
     /**
      * Gets the categories defined by this schema.
      */
-    public readonly categories = GraphCategoryCollection._create(this);
+    public get categories() { return this._categories || (this._categories = GraphCategoryCollection._create(this)); }
 
     /**
      * Gets the properties defined by this schema.
      */
-    public readonly properties = GraphPropertyCollection._create(this);
+    public get properties() { return this._properties || (this._properties = GraphPropertyCollection._create(this)); }
 
-    constructor(name: string) {
-        this.name = name;
+    /**
+     * Creates a subscription for a set of named events.
+     */
+    public subscribe(events: GraphSchemaEvents) {
+        const observers = this._observers || (this._observers = new Map<GraphSchemaSubscription, GraphSchemaEvents>());
+        const subscription: GraphSchemaSubscription = { unsubscribe: () => { observers.delete(subscription); } };
+        this._observers.set(subscription, { ...events });
+        return subscription;
     }
 
     /**
@@ -59,7 +80,13 @@ export class GraphSchema {
      */
     public hasSchema(schema: GraphSchema) {
         if (schema === this) return true;
-        for (const value of this.schemas.values()) if (value.hasSchema(schema)) return true;
+        if (this._schemas) {
+            for (const value of this.schemas.values()) {
+                if (value.hasSchema(schema)) {
+                    return true;
+                }
+            }
+        }
         return false;
     }
 
@@ -76,8 +103,10 @@ export class GraphSchema {
      */
     public * allSchemas(): IterableIterator<GraphSchema> {
         yield this;
-        for (const schema of this.schemas) {
-            yield* schema.allSchemas();
+        if (this._schemas) {
+            for (const schema of this._schemas) {
+                yield* schema.allSchemas();
+            }
         }
     }
 
@@ -86,8 +115,12 @@ export class GraphSchema {
      */
     public findCategory(id: string) {
         for (const schema of this.allSchemas()) {
-            const category = schema.categories.get(id);
-            if (category) return category;
+            if (schema._categories) {
+                const category = schema._categories.get(id);
+                if (category) {
+                    return category;
+                }
+            }
         }
         return undefined;
     }
@@ -97,17 +130,23 @@ export class GraphSchema {
      */
     public * findCategories(...categoryIds: string[]) {
         for (const schema of this.allSchemas()) {
-            yield* schema.categories.values(categoryIds);
+            if (schema._categories) {
+                yield* schema._categories.values(categoryIds);
+            }
         }
     }
 
     /**
      * Finds a property in this schema or its descendants.
      */
-    public findProperty<K extends string>(id: K) {
+    public findProperty(id: string) {
         for (const schema of this.allSchemas()) {
-            const property = schema.properties.get(id);
-            if (property) return property;
+            if (schema._properties) {
+                const property = schema._properties.get(id);
+                if (property) {
+                    return property;
+                }
+            }
         }
         return undefined;
     }
@@ -115,9 +154,36 @@ export class GraphSchema {
     /**
      * Creates an iterator for the properties in this schema or its descendants with the provided ids.
      */
-    public * findProperties<K extends string>(...propertyIds: K[]) {
+    public * findProperties(...propertyIds: string[]) {
         for (const schema of this.allSchemas()) {
-            yield* schema.properties.values(propertyIds);
+            if (schema._properties) {
+                yield* schema._properties.values(propertyIds);
+            }
         }
     }
+
+    /*@internal*/
+    public _raiseOnChanged() {
+        if (this._observers) {
+            for (const { onChanged } of this._observers.values()) {
+                if (onChanged) {
+                    onChanged();
+                }
+            }
+        }
+    }
+}
+
+export interface GraphSchemaEvents {
+    /**
+     * An event raised when the schema or one of its child schemas has changed.
+     */
+    onChanged?: () => void;
+}
+
+export interface GraphSchemaSubscription {
+    /**
+     * Stops listening to a set of subscribed events.
+     */
+    unsubscribe(): void;
 }

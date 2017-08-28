@@ -20,11 +20,7 @@ import { GraphSchema } from "./graphSchema";
  * A collection of child schemas in a schema.
  */
 export class GraphSchemaCollection {
-    /**
-     * The schema that owns the collection.
-     */
-    public readonly schema: GraphSchema;
-
+    private _schema: GraphSchema;
     private _schemas: Map<string, GraphSchema> | undefined;
     private _observers: Map<GraphSchemaCollectionSubscription, GraphSchemaCollectionEvents> | undefined;
 
@@ -34,8 +30,13 @@ export class GraphSchemaCollection {
     }
 
     private constructor(schema: GraphSchema) {
-        this.schema = schema;
+        this._schema = schema;
     }
+
+    /**
+     * Gets the schema that owns the collection.
+     */
+    public get schema() { return this._schema; }
 
     /**
      * Gets the number of schemas in the collection.
@@ -76,6 +77,7 @@ export class GraphSchemaCollection {
         if (!schema.graph) {
             if (!this._schemas) this._schemas = new Map<string, GraphSchema>();
             this._schemas.set(schema.name, schema);
+            schema.subscribe({ onChanged: () => this._schema._raiseOnChanged() });
             this._raiseOnAdded(schema);
         }
         return this;
@@ -96,6 +98,7 @@ export class GraphSchemaCollection {
     }
 
     private _raiseOnAdded(schema: GraphSchema) {
+        this._schema._raiseOnChanged();
         if (this._observers) {
             for (const { onAdded } of this._observers.values()) {
                 if (onAdded) {

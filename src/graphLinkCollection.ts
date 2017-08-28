@@ -25,11 +25,7 @@ import { Graph } from "./graph";
  * A collection of links within a Graph.
  */
 export class GraphLinkCollection {
-    /**
-     * Gets the graph to which this collection belongs.
-     */
-    public readonly graph: Graph;
-
+    private _graph: Graph;
     private _links: Map<string, GraphLink> | undefined;
     private _observers: Map<GraphLinkCollectionSubscription, GraphLinkCollectionEvents> | undefined;
 
@@ -39,8 +35,13 @@ export class GraphLinkCollection {
     }
 
     private constructor(graph: Graph) {
-        this.graph = graph;
+        this._graph = graph;
     }
+
+    /**
+     * Gets the graph to which this collection belongs.
+     */
+    public get graph() { return this._graph; }
 
     /**
      * Gets the number of links in the collection.
@@ -112,7 +113,7 @@ export class GraphLinkCollection {
         const ownLink = this._links.get(key);
         if (ownLink) {
             if (ownLink !== link) {
-                ownLink._merge(link);
+                ownLink._mergeFrom(link);
             }
         }
         else if (this.graph.importLink(link) === link) {

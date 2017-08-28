@@ -24,20 +24,9 @@ import { Graph } from "./graph";
  * Represents a link between two nodes in the graph.
  */
 export class GraphLink extends GraphObject {
-    /**
-     * The source of the link.
-     */
-    public readonly source: GraphNode;
-
-    /**
-     * The target of the link.
-     */
-    public readonly target: GraphNode;
-
-    /**
-     * An optional index for the link (default `0`).
-     */
-    public readonly index: number;
+    private _source: GraphNode;
+    private _target: GraphNode;
+    private _index: number;
 
     /*@internal*/
     public static _create(owner: Graph, source: GraphNode, target: GraphNode, index: number, category?: GraphCategory) {
@@ -46,9 +35,9 @@ export class GraphLink extends GraphObject {
 
     private constructor(owner: Graph, source: GraphNode, target: GraphNode, index: number, category?: GraphCategory) {
         super(owner, category);
-        this.source = this.owner.importNode(source);
-        this.target = this.owner.importNode(target);
-        this.index = index;
+        this._source = this.owner.importNode(source);
+        this._target = this.owner.importNode(target);
+        this._index = index;
 
         source._addLink(this);
         target._addLink(this);
@@ -63,6 +52,21 @@ export class GraphLink extends GraphObject {
      * Gets the document schema for this object.
      */
     public get schema() { return this.owner.schema; }
+
+    /**
+     * The source of the link.
+     */
+    public get source() { return this._source; }
+
+    /**
+     * The target of the link.
+     */
+    public get target() { return this._target; }
+
+    /**
+     * An optional index for the link (default `0`).
+     */
+    public get index() { return this._index; }
 
     /**
      * Creates an iterator for the links related to this link.

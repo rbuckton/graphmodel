@@ -21,30 +21,13 @@ import { GraphNodeCollection } from "./graphNodeCollection";
 import { GraphLink } from "./graphLink";
 import { GraphLinkCollection } from "./graphLinkCollection";
 
-class DocumentSchema extends GraphSchema {
-    public readonly graph: Graph;
-
-    constructor(graph: Graph) {
-        super("#document");
-        this.graph = graph;
-    }
-}
-
 /**
  * A directed graph consisting of nodes and links.
  */
 export class Graph extends GraphObject {
-    /**
-     * Gets the collection of links in the graph.
-     */
-    public readonly links = GraphLinkCollection._create(this);
-
-    /**
-     * Gets the collection of nodes in the graph.
-     */
-    public readonly nodes = GraphNodeCollection._create(this);
-
-    private _schema: DocumentSchema | undefined;
+    private _links: GraphLinkCollection | undefined;
+    private _nodes: GraphNodeCollection | undefined;
+    private _schema: GraphSchema | undefined;
 
     constructor() {
         super();
@@ -58,12 +41,17 @@ export class Graph extends GraphObject {
     /**
      * Gets the document schema for this object.
      */
-    public get schema(): GraphSchema {
-        if (!this._schema) {
-            this._schema = new DocumentSchema(this);
-        }
-        return this._schema;
-    }
+    public get schema() { return this._schema || (this._schema = new GraphSchema("#document", this)); }
+
+    /**
+     * Gets the collection of links in the graph.
+     */
+    public get links() { return this._links || (this._links = GraphLinkCollection._create(this)); }
+
+    /**
+     * Gets the collection of nodes in the graph.
+     */
+    public get nodes() { return this._nodes || (this._nodes = GraphNodeCollection._create(this)); }
 
     /**
      * Adds a new schema to the graph.
@@ -81,22 +69,24 @@ export class Graph extends GraphObject {
     public copySchemas(graph: Graph) {
         if (graph === this) return false;
         let changed = false;
-        for (const category of graph.schema.categories) {
-            if (!this.schema.categories.has(category)) {
-                this.schema.categories.add(category);
-                changed = true;
+        if (graph._schema) {
+            for (const category of graph.schema.categories) {
+                if (!this.schema.categories.has(category)) {
+                    this.schema.categories.add(category);
+                    changed = true;
+                }
             }
-        }
-        for (const property of graph.schema.properties) {
-            if (!this.schema.properties.has(property)) {
-                this.schema.properties.add(property);
-                changed = true;
+            for (const property of graph.schema.properties) {
+                if (!this.schema.properties.has(property)) {
+                    this.schema.properties.add(property);
+                    changed = true;
+                }
             }
-        }
-        for (const schema of graph.schema.schemas) {
-            if (!this.schema.schemas.has(schema)) {
-                this.schema.addSchema(schema);
-                changed = true;
+            for (const schema of graph.schema.schemas) {
+                if (!this.schema.schemas.has(schema)) {
+                    this.schema.addSchema(schema);
+                    changed = true;
+                }
             }
         }
         return changed;
@@ -106,30 +96,27 @@ export class Graph extends GraphObject {
      * Imports a link (along with its source and target nodes) into the graph.
      */
     public importLink(link: GraphLink) {
-        return this._importLink(link, /*excludeSchema*/ false);
+        if (link.owner === this) return link;
+        this.copySchemas(link.owner);
+        return this._importLink(link);
     }
 
     /**
      * Imports a node into the graph.
+     * @param depth The depth of related links to import.
      */
-    public importNode(node: GraphNode): GraphNode {
-        return this._importNode(node, /*excludeSchema*/ false);
-    }
-
-    /**
-     * Imports a subset of nodes into the graph.
-     * @param depth The depth of outgoing links to import.
-     */
-    public importSubset(node: GraphNode, depth: number): GraphNode {
-        return this._importSubset(node, depth, /*excludeSchema*/ false, /*seen*/ new Set<GraphNode>());
+    public importNode(node: GraphNode, depth?: number): GraphNode {
+        if (node.owner === this) return node;
+        this.copySchemas(node.owner);
+        return this._importNode(node, depth, /*seen*/ undefined);
     }
 
     /**
      * Clears the links and nodes of the graph.
      */
     public clear() {
-        this.links.clear();
-        this.nodes.clear();
+        if (this._links) this._links.clear();
+        if (this._nodes) this._nodes.clear();
     }
 
     /**
@@ -154,40 +141,31 @@ export class Graph extends GraphObject {
         return undefined;
     }
 
-    private _importLink(link: GraphLink, excludeSchema: boolean) {
-        if (link.owner === this) return link;
-        if (!excludeSchema) this.copySchemas(link.owner);
-        const source = this._importNode(link.source, /*excludeSchema*/ true);
-        const target = this._importNode(link.target, /*excludeSchema*/ true);
+    private _importLink(link: GraphLink) {
+        const source = this._importNode(link.source);
+        const target = this._importNode(link.target);
         const imported = this.links.getOrCreate(source, target, link.index);
-        imported._merge(link);
+        imported._mergeFrom(link);
         return imported;
     }
 
-    private _importNode(node: GraphNode, excludeSchema: boolean) {
-        if (node.owner === this) return node;
-        if (!excludeSchema) this.copySchemas(node.owner);
-        const imported = this.nodes.getOrCreate(node.id);
-        imported._merge(node);
-        return imported;
-    }
-
-    private _importSubset(node: GraphNode, depth: number, excludeSchema: boolean, seen: Set<GraphNode>) {
-        if (node.owner === this) return node;
-        if (!excludeSchema) this.copySchemas(node.owner);
-        if (seen.has(node)) return this.nodes.get(node.id)!;
-        seen.add(node);
-        const importedNode = this._importNode(node, /*excludeSchema*/ true);
+    private _importNode(node: GraphNode, depth = 0, seen?: Set<GraphNode>) {
+        const importedNode = this.nodes.getOrCreate(node.id);
+        importedNode._mergeFrom(node);
         if (depth > 0) {
+            if (!seen) seen = new Set<GraphNode>();
+            seen.add(node);
             for (const link of node.outgoingLinks()) {
-                const target = this._importSubset(link.target, depth - 1, /*excludeSchema*/ true, seen);
+                if (seen.has(link.target)) continue;
+                const target = this._importNode(link.target, depth - 1, seen);
                 const importedLink = this.links.getOrCreate(importedNode.id, target.id, link.index);
-                importedLink._merge(link);
+                importedLink._mergeFrom(link);
             }
             for (const link of node.incomingLinks()) {
-                const source = this._importSubset(link.source, depth - 1, /*excludeSchema*/ true, seen);
+                if (seen.has(link.source)) continue;
+                const source = this._importNode(link.source, depth - 1, seen);
                 const importedLink = this.links.getOrCreate(source.id, importedNode.id, link.index);
-                importedLink._merge(link);
+                importedLink._mergeFrom(link);
             }
         }
         return importedNode;

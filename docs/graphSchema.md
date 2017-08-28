@@ -3,12 +3,12 @@
 /**
  * A GraphSchema defines a related set of graph categories and properties.
  */
-export declare class GraphSchema<P extends object = any> {
-    constructor(name: string, ...schemas: GraphSchema<P>[]);
+export declare class GraphSchema {
+    constructor(name: string, ...schemas: GraphSchema[]);
     /**
      * Gets the graph that owns the schema.
      */
-    readonly graph: Graph<P> | undefined;
+    readonly graph: Graph | undefined;
     /**
      * Gets the name of the schema.
      */
@@ -16,47 +16,59 @@ export declare class GraphSchema<P extends object = any> {
     /**
      * Gets the child schemas of this schema.
      */
-    readonly schemas: GraphSchemaCollection<P>;
+    readonly schemas: GraphSchemaCollection;
     /**
      * Gets the categories defined by this schema.
      */
-    readonly categories: GraphCategoryCollection<P>;
+    readonly categories: GraphCategoryCollection;
     /**
      * Gets the properties defined by this schema.
      */
-    readonly properties: GraphPropertyCollection<P>;
+    readonly properties: GraphPropertyCollection;
     /**
-     * The underlying data type for the properties in the schema. This will never have a value and is only used for type checking and type inference purposes.
+     * Creates a subscription for a set of named events.
      */
-    readonly ["[[Properties]]"]: P;
+    subscribe(events: GraphSchemaEvents): GraphSchemaSubscription;
     /**
      * Determines whether this schema contains the provided schema as a child or grandchild.
      */
-    hasSchema(schema: GraphSchema<P>): boolean;
+    hasSchema(schema: GraphSchema): boolean;
     /**
      * Adds a child schema to this schema.
      */
-    addSchema(schema: GraphSchema<P>): this;
+    addSchema(schema: GraphSchema): this;
     /**
      * Creates an iterator for all schemas within this schema (including this schema).
      */
-    allSchemas(): IterableIterator<GraphSchema<P>>;
+    allSchemas(): IterableIterator<GraphSchema>;
     /**
      * Finds a category in this schema or its descendants.
      */
-    findCategory(id: string): GraphCategory<P> | undefined;
+    findCategory(id: string): GraphCategory | undefined;
     /**
      * Creates an iterator for the categories in this schema or its descendants with the provided ids.
      */
-    findCategories(...categoryIds: string[]): IterableIterator<GraphCategory<P>>;
+    findCategories(...categoryIds: string[]): IterableIterator<GraphCategory>;
     /**
      * Finds a property in this schema or its descendants.
      */
-    findProperty<K extends keyof P>(id: K): GraphProperty<P, K> | undefined;
+    findProperty(id: string): GraphProperty | undefined;
     /**
      * Creates an iterator for the properties in this schema or its descendants with the provided ids.
      */
-    findProperties<K extends keyof P>(...propertyIds: K[]): IterableIterator<GraphProperty<P, K>>;
+    findProperties(...propertyIds: string[]): IterableIterator<GraphProperty>;
+}
+export interface GraphSchemaEvents {
+    /**
+     * An event raised when the schema or one of its child schemas has changed.
+     */
+    onChanged?: () => void;
+}
+export interface GraphSchemaSubscription {
+    /**
+     * Stops listening to a set of subscribed events.
+     */
+    unsubscribe(): void;
 }
 ```
 

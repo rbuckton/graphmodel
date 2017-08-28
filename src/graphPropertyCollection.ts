@@ -21,11 +21,7 @@ import { GraphProperty } from "./graphProperty";
  * A collection of graph properties in a schema.
  */
 export class GraphPropertyCollection {
-    /**
-     * Gets the schema that owns the collection.
-     */
-    public readonly schema: GraphSchema;
-
+    private _schema: GraphSchema;
     private _properties: Map<string, GraphProperty> | undefined;
     private _observers: Map<GraphPropertyCollectionSubscription, GraphPropertyCollectionEvents> | undefined;
 
@@ -35,8 +31,13 @@ export class GraphPropertyCollection {
     }
 
     private constructor(schema: GraphSchema) {
-        this.schema = schema;
+        this._schema = schema;
     }
+
+    /**
+     * Gets the schema that owns the collection.
+     */
+    public get schema() { return this._schema; }
 
     /**
      * Gets the number of properties in the collection.
@@ -117,9 +118,6 @@ export class GraphPropertyCollection {
     /**
      * Gets the properties in the collection.
      */
-    public values(): IterableIterator<GraphProperty>;
-    /*@internal*/
-    public values(propertyIds: Iterable<string>): IterableIterator<GraphProperty>;
     public * values(propertyIds?: Iterable<string>) {
         if (propertyIds) {
             for (const id of propertyIds) {
@@ -140,6 +138,7 @@ export class GraphPropertyCollection {
     }
 
     private _raiseOnAdded(property: GraphProperty) {
+        this._schema._raiseOnChanged();
         if (this._observers) {
             for (const { onAdded } of this._observers.values()) {
                 if (onAdded) {
@@ -150,6 +149,7 @@ export class GraphPropertyCollection {
     }
 
     private _raiseOnDeleted(property: GraphProperty) {
+        this._schema._raiseOnChanged();
         if (this._observers) {
             for (const { onDeleted } of this._observers.values()) {
                 if (onDeleted) {

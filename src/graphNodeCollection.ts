@@ -24,11 +24,7 @@ import { Graph } from "./graph";
  * A collection of nodes within a Graph.
  */
 export class GraphNodeCollection {
-    /**
-     * Gets the graph to which this collection belongs.
-     */
-    public readonly graph: Graph;
-
+    private _graph: Graph;
     private _nodes: Map<string, GraphNode> | undefined;
     private _observers: Map<GraphNodeCollectionSubscription, GraphNodeCollectionEvents> | undefined;
 
@@ -38,8 +34,13 @@ export class GraphNodeCollection {
     }
 
     private constructor(graph: Graph) {
-        this.graph = graph;
+        this._graph = graph;
     }
+
+    /**
+     * Gets the graph to which this collection belongs.
+     */
+    public get graph() { return this._graph; }
 
     /**
      * Gets the number of nodes in the collection.

@@ -3,12 +3,12 @@
 /**
  * A collection of graph properties in a schema.
  */
-export declare class GraphPropertyCollection<P extends object = any> {
+export declare class GraphPropertyCollection {
     private constructor();
     /**
      * Gets the schema that owns the collection.
      */
-    readonly schema: GraphSchema<P>;
+    readonly schema: GraphSchema;
     /**
      * Gets the number of properties in the collection.
      */
@@ -16,23 +16,23 @@ export declare class GraphPropertyCollection<P extends object = any> {
     /**
      * Creates a subscription for a set of named events.
      */
-    subscribe(events: GraphPropertyCollectionEvents<P>): GraphPropertyCollectionSubscription;
+    subscribe(events: GraphPropertyCollectionEvents): GraphPropertyCollectionSubscription;
     /**
      * Determines whether the collection contains the specified property.
      */
-    has(property: GraphProperty<P>): boolean;
+    has(property: GraphProperty): boolean;
     /**
      * Gets the property with the specified id.
      */
-    get<K extends keyof P>(id: K): GraphProperty<P, K> | undefined;
+    get(id: string): GraphProperty | undefined;
     /**
      * Gets the property with the specified id. If one does not exist, a new property is created.
      */
-    getOrCreate<K extends keyof P>(id: K): GraphProperty<P, K>;
+    getOrCreate<V = any>(id: string): GraphProperty<V>;
     /**
      * Adds a property to the collection.
      */
-    add<K extends keyof P>(property: GraphProperty<P, K>): this;
+    add(property: GraphProperty): this;
     /**
      * Removes a property from the collection.
      */
@@ -44,21 +44,21 @@ export declare class GraphPropertyCollection<P extends object = any> {
     /**
      * Gets the properties in the collection.
      */
-    values(): IterableIterator<GraphProperty<P, keyof P>>;
+    values(propertyIds?: Iterable<string>): IterableIterator<GraphProperty>;
     /**
      * Gets the properties in the collection.
      */
-    [Symbol.iterator](): IterableIterator<GraphProperty<P, keyof P>>;
+    [Symbol.iterator](): IterableIterator<GraphProperty>;
 }
-export interface GraphPropertyCollectionEvents<P extends object = any> {
+export interface GraphPropertyCollectionEvents {
     /**
      * An event raised when a property is added to the collection.
      */
-    onAdded?: (category: GraphProperty<P, keyof P>) => void;
+    onAdded?: (category: GraphProperty) => void;
     /**
      * An event raised when a property is removed from the collection.
      */
-    onDeleted?: (category: GraphProperty<P, keyof P>) => void;
+    onDeleted?: (category: GraphProperty) => void;
 }
 export interface GraphPropertyCollectionSubscription {
     /**

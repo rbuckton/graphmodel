@@ -3,16 +3,8 @@
 /**
  * A directed graph consisting of nodes and links.
  */
-export declare class Graph<P extends object = any> extends GraphObject<P> {
-    constructor(...schemas: GraphSchema<P>[]);
-    /**
-     * Gets the collection of links in the graph.
-     */
-    readonly links: GraphLinkCollection<P>;
-    /**
-     * Gets the collection of nodes in the graph.
-     */
-    readonly nodes: GraphNodeCollection<P>;
+export declare class Graph extends GraphObject {
+    constructor(...schemas: GraphSchema[]);
     /**
      * Gets the graph that this object belongs to.
      */
@@ -20,28 +12,32 @@ export declare class Graph<P extends object = any> extends GraphObject<P> {
     /**
      * Gets the document schema for this object.
      */
-    readonly schema: GraphSchema<P>;
+    readonly schema: GraphSchema;
+    /**
+     * Gets the collection of links in the graph.
+     */
+    readonly links: GraphLinkCollection;
+    /**
+     * Gets the collection of nodes in the graph.
+     */
+    readonly nodes: GraphNodeCollection;
     /**
      * Adds a new schema to the graph.
      */
-    addSchema(schema: GraphSchema<P>): this;
+    addSchema(schema: GraphSchema): this;
     /**
      * Copies the schemas from another graph.
      */
-    copySchemas(graph: Graph<P>): boolean;
+    copySchemas(graph: Graph): boolean;
     /**
      * Imports a link (along with its source and target nodes) into the graph.
      */
-    importLink(link: GraphLink<P>): GraphLink<P>;
+    importLink(link: GraphLink): GraphLink;
     /**
      * Imports a node into the graph.
+     * @param depth The depth of outgoing links to import (default `0`).
      */
-    importNode(node: GraphNode<P>): GraphNode<P>;
-    /**
-     * Imports a subset of nodes into the graph.
-     * @param depth The depth of outgoing links to import.
-     */
-    importSubset(node: GraphNode<P>, depth: number): GraphNode<P>;
+    importNode(node: GraphNode, depth?: number): GraphNode;
     /**
      * Clears the links and nodes of the graph.
      */
@@ -50,13 +46,13 @@ export declare class Graph<P extends object = any> extends GraphObject<P> {
      * Renames a node.
      * @param newId The new id for the node.
      */
-    renameNode(node: GraphNode<P>, newId: string): GraphNode<P>;
+    renameNode(node: GraphNode, newId: string): GraphNode;
     /**
      * Renames a node.
      * @param nodeId The id of the node to rename.
      * @param newId The new id for the node.
      */
-    renameNode(nodeId: string, newId: string): GraphNode<P> | undefined;
+    renameNode(nodeId: string, newId: string): GraphNode | undefined;
 }
 ```
 

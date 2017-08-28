@@ -3,12 +3,12 @@
 /**
  * A collection of child schemas in a schema.
  */
-export declare class GraphSchemaCollection<P extends object = any> {
+export declare class GraphSchemaCollection {
     private constructor();
     /**
      * The schema that owns the collection.
      */
-    readonly schema: GraphSchema<P>;
+    readonly schema: GraphSchema;
     /**
      * Gets the number of schemas in the collection.
      */
@@ -20,29 +20,29 @@ export declare class GraphSchemaCollection<P extends object = any> {
     /**
      * Determines whether the collection contains the specified schema.
      */
-    has(schema: GraphSchema<P>): boolean;
+    has(schema: GraphSchema): boolean;
     /**
      * Gets the property with the specified name.
      */
-    get(name: string): GraphSchema<any> | undefined;
+    get(name: string): GraphSchema | undefined;
     /**
      * Adds a schema to the collection.
      */
-    add(schema: GraphSchema<P>): this;
+    add(schema: GraphSchema): this;
     /**
      * Gets the schemas in the collection.
      */
-    values(): IterableIterator<GraphSchema<any>>;
+    values(): IterableIterator<GraphSchema>;
     /**
      * Gets the schemas in the collection.
      */
-    [Symbol.iterator](): IterableIterator<GraphSchema<any>>;
+    [Symbol.iterator](): IterableIterator<GraphSchema>;
 }
-export interface GraphSchemaCollectionEvents<P extends object = any> {
+export interface GraphSchemaCollectionEvents {
     /**
      * An event raised when a schema is added to the collection.
      */
-    onAdded?: (schema: GraphSchema<P>) => void;
+    onAdded?: (schema: GraphSchema) => void;
 }
 export interface GraphSchemaCollectionSubscription {
     /**

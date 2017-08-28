@@ -21,11 +21,7 @@ import { GraphCategory } from "./graphCategory";
  * A collection of graph categories in a schema.
  */
 export class GraphCategoryCollection {
-    /**
-     * Gets the schema that owns the collection.
-     */
-    public readonly schema: GraphSchema;
-
+    private _schema: GraphSchema;
     private _categories: Map<string, GraphCategory> | undefined;
     private _observers: Map<GraphCategoryCollectionSubscription, GraphCategoryCollectionEvents> | undefined;
 
@@ -35,8 +31,13 @@ export class GraphCategoryCollection {
     }
 
     private constructor(schema: GraphSchema) {
-        this.schema = schema;
+        this._schema = schema;
     }
+
+    /**
+     * Gets the schema that owns the collection.
+     */
+    public get schema() { return this._schema; }
 
     /**
      * Gets the number of categories in the collection.
@@ -114,12 +115,9 @@ export class GraphCategoryCollection {
         }
     }
 
-    /*@internal*/
-    public values(categoryIds: Iterable<string>): IterableIterator<GraphCategory>;
     /**
      * Creates an iterator for the values in the collection.
      */
-    public values(): IterableIterator<GraphCategory>;
     public * values(categoryIds?: Iterable<string>) {
         if (this._categories) {
             if (categoryIds) {
@@ -149,6 +147,7 @@ export class GraphCategoryCollection {
     }
 
     private _raiseOnAdded(category: GraphCategory) {
+        this._schema._raiseOnChanged();
         if (this._observers) {
             for (const { onAdded } of this._observers.values()) {
                 if (onAdded) {
@@ -159,6 +158,7 @@ export class GraphCategoryCollection {
     }
 
     private _raiseOnDeleted(category: GraphCategory) {
+        this._schema._raiseOnChanged();
         if (this._observers) {
             for (const { onDeleted } of this._observers.values()) {
                 if (onDeleted) {
