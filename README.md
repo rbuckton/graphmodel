@@ -104,6 +104,8 @@ const target = profile2.firstRelated("source", {
 * [Graph](docs/graph.md)
 * [GraphSchema](docs/graphSchema.md)
 * [GraphSchemaCollection](docs/graphSchemaCollection.md)
+* [GraphMetadataContainer](docs/graphMetadataContainer.md)
+* [GraphMetadata](docs/graphMetadata.md)
 * [GraphCategory](docs/graphCategory.md)
 * [GraphCategoryCollection](docs/graphCategoryCollection.md)
 * [GraphProperty](docs/graphProperty.md)
@@ -113,6 +115,7 @@ const target = profile2.firstRelated("source", {
 * [GraphNodeCollection](docs/graphNodeCollection.md)
 * [GraphLink](docs/graphLink.md)
 * [GraphLinkCollection](docs/graphLinkCollection.md)
+* [GraphCommonSchema](docs/graphCommonSchema.md)
 
 ## License
 

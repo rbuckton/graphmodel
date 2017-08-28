@@ -4,7 +4,7 @@
  * A directed graph consisting of nodes and links.
  */
 export declare class Graph extends GraphObject {
-    constructor(...schemas: GraphSchema[]);
+    constructor();
     /**
      * Gets the graph that this object belongs to.
      */

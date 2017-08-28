@@ -16,6 +16,7 @@
 
 import { GraphSchema } from "./graphSchema";
 import { GraphCategory } from "./graphCategory";
+import { GraphMetadata } from "./graphMetadata";
 
 /**
  * A collection of graph categories in a schema.
@@ -73,9 +74,9 @@ export class GraphCategoryCollection {
     /**
      * Gets the category with the provided id. If one does not exist, a new category is created.
      */
-    public getOrCreate(id: string) {
+    public getOrCreate(id: string, metadataFactory?: () => GraphMetadata) {
         let category = this.get(id);
-        if (!category) this.add(category = GraphCategory._create(id));
+        if (!category) this.add(category = GraphCategory._create(id, metadataFactory));
         return category;
     }
 

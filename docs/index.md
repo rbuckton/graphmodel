@@ -2,6 +2,8 @@
 * [Graph](graph.md)
 * [GraphSchema](graphSchema.md)
 * [GraphSchemaCollection](graphSchemaCollection.md)
+* [GraphMetadataContainer](graphMetadataContainer.md)
+* [GraphMetadata](graphMetadata.md)
 * [GraphCategory](graphCategory.md)
 * [GraphCategoryCollection](graphCategoryCollection.md)
 * [GraphProperty](graphProperty.md)
@@ -11,3 +13,4 @@
 * [GraphNodeCollection](graphNodeCollection.md)
 * [GraphLink](graphLink.md)
 * [GraphLinkCollection](graphLinkCollection.md)
+* [GraphCommonSchema](graphCommonSchema.md)

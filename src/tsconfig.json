@@ -4,6 +4,7 @@
         "strict": true,
         "stripInternal": true,
         "declaration": true,
-        "sourceMap": true
+        "sourceMap": true,
+        "preserveConstEnums": true
     }
 }

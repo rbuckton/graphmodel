@@ -43,9 +43,13 @@ export declare abstract class GraphObject {
      */
     deleteCategory(category: GraphCategory): boolean;
     /**
-     * Determines whether the object has the specified property.
+     * Determines whether the object has the specified property or has a category that defines the specified property.
      */
     has(key: string | GraphProperty): boolean;
+    /**
+     * Determines whether the object has the specified property.
+     */
+    hasOwn(property: GraphProperty): boolean;
     /**
      * Gets the value for the specified property.
      */

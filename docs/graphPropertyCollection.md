@@ -28,7 +28,7 @@ export declare class GraphPropertyCollection {
     /**
      * Gets the property with the specified id. If one does not exist, a new property is created.
      */
-    getOrCreate<V = any>(id: string): GraphProperty<V>;
+    getOrCreate<V = any>(id: string, metadataFactory?: () => GraphMetadata<V>): GraphProperty<V>;
     /**
      * Adds a property to the collection.
      */

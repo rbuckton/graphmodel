@@ -15,6 +15,7 @@
  */
 
 import { GraphSchema } from "./graphSchema";
+import { GraphCommonSchema } from "./graphCommonSchema";
 import { GraphCategory } from "./graphCategory";
 import { GraphObject } from "./graphObject";
 import { GraphNode } from "./graphNode";
@@ -38,6 +39,9 @@ export class GraphLink extends GraphObject {
         this._source = this.owner.importNode(source);
         this._target = this.owner.importNode(target);
         this._index = index;
+
+        this.set(GraphCommonSchema.SourceNode, source);
+        this.set(GraphCommonSchema.TargetNode, target);
 
         source._addLink(this);
         target._addLink(this);
@@ -67,6 +71,11 @@ export class GraphLink extends GraphObject {
      * An optional index for the link (default `0`).
      */
     public get index() { return this._index; }
+
+    /**
+     * Gets a value indicating whether this is a containment link.
+     */
+    public get isContainment() { return this.get(GraphCommonSchema.IsContainment) || false; }
 
     /**
      * Creates an iterator for the links related to this link.

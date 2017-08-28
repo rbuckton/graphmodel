@@ -14,19 +14,23 @@
  * limitations under the License.
  */
 
+import { GraphMetadataContainer } from "./graphMetadataContainer";
+import { GraphMetadata } from "./graphMetadata";
+
 /**
  * Graph catagories are used to categorize graph objects such as nodes or links.
  */
-export class GraphCategory {
+export class GraphCategory extends GraphMetadataContainer {
     private _id: string;
     private _basedOn: GraphCategory | undefined;
 
     /*@internal*/
-    public static _create(id: string) {
-        return new GraphCategory(id);
+    public static _create(id: string, metadataFactory?: () => GraphMetadata) {
+        return new GraphCategory(id, metadataFactory);
     }
 
-    private constructor(id: string) {
+    private constructor(id: string, metadataFactory?: () => GraphMetadata) {
+        super(metadataFactory);
         this._id = id;
     }
 

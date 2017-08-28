@@ -14,18 +14,24 @@
  * limitations under the License.
  */
 
+import { GraphMetadataContainer } from "./graphMetadataContainer";
+import { GraphMetadata } from "./graphMetadata";
+
+
+
 /**
  * Graph properties are used to annotate graph objects such as nodes or links.
  */
-export class GraphProperty<V = any> {
+export class GraphProperty<V = any> extends GraphMetadataContainer<V> {
     private _id: string;
 
     /*@internal*/
-    public static _create(id: string) {
-        return new GraphProperty(id);
+    public static _create<V>(id: string, metadataFactory?: () => GraphMetadata<V>) {
+        return new GraphProperty<V>(id, metadataFactory);
     }
 
-    private constructor(id: string) {
+    private constructor(id: string, metadataFactory?: () => GraphMetadata<V>) {
+        super(metadataFactory);
         this._id = id;
     }
 

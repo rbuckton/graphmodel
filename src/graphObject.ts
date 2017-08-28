@@ -17,8 +17,10 @@
 import { GraphSchema } from "./graphSchema";
 import { GraphCategory } from "./graphCategory";
 import { GraphProperty } from "./graphProperty";
+import { GraphMetadata } from "./graphMetadata";
 import { GraphNode } from "./graphNode";
 import { Graph } from "./graph";
+import { GraphMetadataContainer } from "./graphMetadataContainer";
 
 /**
  * The base definition of an extensible graph object.
@@ -143,12 +145,19 @@ export abstract class GraphObject {
     }
 
     /**
-     * Determines whether the object has the specified property.
+     * Determines whether the object has the specified property or has a category that defines the specified property.
      */
     public has(key: string | GraphProperty) {
         const property = typeof key === "string" ? this.schema && this.schema.findProperty(key) : key;
         return property !== undefined
-            && this._properties !== undefined
+            && (this.hasOwn(property) || this._find(property) !== undefined);
+    }
+
+    /**
+     * Determines whether the object has the specified property.
+     */
+    public hasOwn(property: GraphProperty) {
+        return this._properties !== undefined
             && this._properties.has(property);
     }
 
@@ -159,9 +168,20 @@ export abstract class GraphObject {
     public get(key: string | GraphProperty): any;
     public get(key: string | GraphProperty): any {
         const property = typeof key === "string" ? this.schema && this.schema.findProperty(key) : key;
-        return property
-            && this._properties
-            && this._properties.get(property);
+        if (!property) return undefined;
+
+        let value = this._properties && this._properties.get(property);
+        if (value === undefined) {
+            const found = this._find(property);
+            value = found && found.get(property);
+        }
+
+        if (value === undefined && this._owner) {
+            const metadata = property.getMetadata(this._owner);
+            value = metadata.defaultValue;
+        }
+
+        return value;
     }
 
     /**
@@ -170,18 +190,24 @@ export abstract class GraphObject {
     public set<V>(key: GraphProperty<V>, value: V | undefined): this;
     public set(key: string | GraphProperty, value: any): this;
     public set(key: string | GraphProperty, value: any) {
-        if (value === undefined || value === null) {
+        if (value === undefined) {
             this.delete(key);
             return this;
         }
 
         const property = typeof key === "string" ? this.schema && this.schema.findProperty(key) : key;
-        if (property) {
-            if (!this._properties) this._properties = new Map<GraphProperty, any>();
-            this._properties.set(property, value);
-            this._raiseOnPropertyChanged(property);
-        }
+        if (!property) return this;
 
+        if (!this._properties) this._properties = new Map<GraphProperty, any>();
+
+        const ownValue = this._properties.get(property);
+        if (value === ownValue) return this;
+
+        const metadata = this._owner ? property.getMetadata(this._owner) : property.createDefaultMetadata();
+        if (ownValue !== undefined && metadata.isImmutable) return this;
+
+        this._properties.set(property, value);
+        this._raiseOnPropertyChanged(property);
         return this;
     }
 
@@ -190,12 +216,14 @@ export abstract class GraphObject {
      */
     public delete(key: string | GraphProperty) {
         const property = typeof key === "string" ? this.schema && this.schema.findProperty(key) : key;
-        if (property && this._properties && this._properties.delete(property)) {
-            this._raiseOnPropertyChanged(property);
-            return true;
-        }
+        if (!property || !this._properties || !this.hasOwn(property)) return false;
 
-        return false;
+        const metadata = this._owner ? property.getMetadata(this._owner) : property.createDefaultMetadata();
+        if (!metadata.isRemovable) return false;
+
+        this._properties.delete(property);
+        this._raiseOnPropertyChanged(property);
+        return true;
     }
 
     /**
@@ -207,6 +235,11 @@ export abstract class GraphObject {
             if (!this._categories) this._categories = new Set<GraphCategory>();
             for (const category of other._categories) {
                 if (!this._categories.has(category)) {
+
+                    if (this._owner) {
+                        this._owner._importMetadata(other._owner, category);
+                    }
+
                     this._categories.add(category);
                     this._raiseOnCategoryChanged("add", category);
                     changed = true;
@@ -220,18 +253,27 @@ export abstract class GraphObject {
      * Copies the properties and values of another graph object to this one.
      */
     public copyProperties(other: GraphObject) {
+        if (!other._properties) return false;
+        if (!this._properties) this._properties = new Map<GraphProperty, any>();
+
         let changed = false;
-        if (other._properties) {
-            if (!this._properties) this._properties = new Map<GraphProperty, any>();
-            for (const [property, value] of other._properties) {
-                const ownValue = this._properties.get(property);
-                if (ownValue !== value) {
-                    this._properties.set(property, value);
-                    this._raiseOnPropertyChanged(property);
-                    changed = true;
+        for (const [property, value] of other._properties) {
+            const ownValue = this._properties.get(property);
+            if (ownValue === value) continue;
+
+            if (this._owner) {
+                const metadata = this._owner._importMetadata(other._owner, property);
+                if (metadata) {
+                    if (!metadata.isSharable) continue;
+                    if (metadata.isImmutable && ownValue !== undefined) continue;
                 }
             }
+
+            this._properties.set(property, value);
+            this._raiseOnPropertyChanged(property);
+            changed = true;
         }
+
         return changed;
     }
 
@@ -264,6 +306,13 @@ export abstract class GraphObject {
     }
 
     /*@internal*/
+    public _setOwner(owner: Graph) {
+        if (owner && !this._owner) {
+            this._owner = owner;
+        }
+    }
+
+    /*@internal*/
     public _mergeFrom(other: this) {
         let changed = false;
         if (this.copyProperties(other)) changed = true;
@@ -291,6 +340,23 @@ export abstract class GraphObject {
                 }
             }
         }
+    }
+
+    private _find(property: GraphProperty) {
+        if (this._categories && this._owner) {
+            let category: GraphCategory | undefined;
+            for (category of this._categories) {
+                while (category) {
+                    const metadata = category.getMetadata(this._owner);
+                    if (metadata.hasOwn(property)) {
+                        return metadata;
+                    }
+                    category = category.basedOn;
+                }
+            }
+        }
+
+        return undefined;
     }
 }
 

@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+export { GraphMetadataContainer } from "./graphMetadataContainer";
 export { GraphCategory } from "./graphCategory";
 export { GraphCategoryCollection, GraphCategoryCollectionEvents, GraphCategoryCollectionSubscription } from "./graphCategoryCollection";
 export { GraphProperty } from "./graphProperty";
@@ -21,8 +22,10 @@ export { GraphPropertyCollection, GraphPropertyCollectionEvents, GraphPropertyCo
 export { GraphSchema } from "./graphSchema";
 export { GraphSchemaCollection, GraphSchemaCollectionEvents, GraphSchemaCollectionSubscription } from "./graphSchemaCollection";
 export { GraphObject, GraphObjectEvents, GraphObjectSubscription } from "./graphObject";
+export { GraphMetadata, GraphMetadataOptions } from "./graphMetadata";
 export { GraphNode, GraphNodeTraversal } from "./graphNode";
 export { GraphNodeCollection, GraphNodeCollectionEvents, GraphNodeCollectionSubscription } from "./graphNodeCollection";
 export { GraphLink, GraphLinkTraversal } from "./graphLink";
 export { GraphLinkCollection, GraphLinkCollectionEvents, GraphLinkCollectionSubscription } from "./graphLinkCollection";
+export { GraphCommonSchema } from "./graphCommonSchema";
 export { Graph } from "./graph";

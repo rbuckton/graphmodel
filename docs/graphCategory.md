@@ -3,7 +3,7 @@
 /**
  * Graph catagories are used to categorize graph objects such as nodes or links.
  */
-export declare class GraphCategory {
+export declare class GraphCategory extends GraphMetadataContainer {
     private constructor();
     /**
      * Gets the unique id of the category.
@@ -21,6 +21,7 @@ export declare class GraphCategory {
 ```
 
 ### See Also
+* [GraphMetadataContainer](graphMetadataContainer.md)
 * [GraphCategoryCollection](graphCategoryCollection.md)
 * [GraphObject](graphObject.md)
 * [Graph](graph.md)

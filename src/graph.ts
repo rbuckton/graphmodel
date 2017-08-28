@@ -16,10 +16,13 @@
 
 import { GraphSchema } from "./graphSchema";
 import { GraphObject } from "./graphObject";
+import { GraphMetadataContainer } from "./graphMetadataContainer";
+import { GraphMetadata } from "./graphMetadata";
 import { GraphNode } from "./graphNode";
 import { GraphNodeCollection } from "./graphNodeCollection";
 import { GraphLink } from "./graphLink";
 import { GraphLinkCollection } from "./graphLinkCollection";
+import { GraphCommonSchema } from "./graphCommonSchema";
 
 /**
  * A directed graph consisting of nodes and links.
@@ -28,6 +31,7 @@ export class Graph extends GraphObject {
     private _links: GraphLinkCollection | undefined;
     private _nodes: GraphNodeCollection | undefined;
     private _schema: GraphSchema | undefined;
+    private _metadata: Map<GraphMetadataContainer, GraphMetadata> | undefined;
 
     constructor() {
         super();
@@ -41,7 +45,14 @@ export class Graph extends GraphObject {
     /**
      * Gets the document schema for this object.
      */
-    public get schema() { return this._schema || (this._schema = new GraphSchema("#document", this)); }
+    public get schema() {
+        if (!this._schema) {
+            this._schema = new GraphSchema("#document", this);
+            this._schema.addSchema(GraphCommonSchema.Schema);
+        }
+
+        return this._schema;
+    }
 
     /**
      * Gets the collection of links in the graph.
@@ -69,20 +80,32 @@ export class Graph extends GraphObject {
     public copySchemas(graph: Graph) {
         if (graph === this) return false;
         let changed = false;
+        if (graph._metadata) {
+            if (!this._metadata) this._metadata = new Map<GraphMetadataContainer, GraphMetadata>();
+            for (const [container, metadata] of graph._metadata) {
+                const ownMetadata = this._metadata.get(container);
+                if (ownMetadata) {
+                    ownMetadata._mergeFrom(metadata);
+                }
+                else {
+                    this._setMetadata(container, metadata.copy());
+                }
+            }
+        }
         if (graph._schema) {
-            for (const category of graph.schema.categories) {
+            for (const category of graph._schema.categories) {
                 if (!this.schema.categories.has(category)) {
                     this.schema.categories.add(category);
                     changed = true;
                 }
             }
-            for (const property of graph.schema.properties) {
+            for (const property of graph._schema.properties) {
                 if (!this.schema.properties.has(property)) {
                     this.schema.properties.add(property);
                     changed = true;
                 }
             }
-            for (const schema of graph.schema.schemas) {
+            for (const schema of graph._schema.schemas) {
                 if (!this.schema.schemas.has(schema)) {
                     this.schema.addSchema(schema);
                     changed = true;
@@ -139,6 +162,33 @@ export class Graph extends GraphObject {
             return newNode;
         }
         return undefined;
+    }
+
+    /*@internal*/
+    public _getMetadata(container: GraphMetadataContainer) {
+        return this._metadata
+            && this._metadata.get(container);
+    }
+
+    /*@internal*/
+    public _setMetadata(container: GraphMetadataContainer, metadata: GraphMetadata | undefined) {
+        if (metadata) {
+            if (!this._metadata) this._metadata = new Map<GraphMetadataContainer, GraphMetadata>();
+            metadata._setOwner(this);
+            this._metadata.set(container, metadata);
+        }
+        else if (this._metadata) {
+            this._metadata.delete(container);
+        }
+    }
+
+    /*@internal*/
+    public _importMetadata(other: Graph | undefined, container: GraphMetadataContainer) {
+        if (!other) return undefined;
+        let metadata = other._getMetadata(container);
+        if (!metadata) return container.getMetadata(this);
+        if (!this._getMetadata(container)) this._setMetadata(container, metadata = metadata.copy());
+        return metadata;
     }
 
     private _importLink(link: GraphLink) {

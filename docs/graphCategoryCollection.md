@@ -28,7 +28,7 @@ export declare class GraphCategoryCollection {
     /**
      * Gets the category with the provided id. If one does not exist, a new category is created.
      */
-    getOrCreate(id: string): GraphCategory;
+    getOrCreate(id: string, metadataFactory?: () => GraphMetadata): GraphCategory;
     /**
      * Adds a category to the collection.
      */

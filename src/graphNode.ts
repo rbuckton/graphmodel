@@ -15,6 +15,7 @@
  */
 
 import { GraphSchema } from "./graphSchema";
+import { GraphCommonSchema } from "./graphCommonSchema";
 import { GraphCategory } from "./graphCategory";
 import { GraphObject } from "./graphObject";
 import { GraphLink } from "./graphLink";
@@ -36,6 +37,7 @@ export class GraphNode extends GraphObject {
     private constructor(owner: Graph, id: string, category?: GraphCategory) {
         super(owner, category);
         this._id = id;
+        this.set(GraphCommonSchema.UniqueId, id);
     }
 
     /**

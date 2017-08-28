@@ -3,7 +3,7 @@
 /**
  * Graph properties are used to annotate graph objects such as nodes or links.
  */
-export declare class GraphProperty<V = any> {
+export declare class GraphProperty<V = any> extends GraphMetadataContainer<V> {
     private constructor();
     /**
      * The unique id of the property.
@@ -17,6 +17,7 @@ export declare class GraphProperty<V = any> {
 ```
 
 ### See Also
+* [GraphMetadataContainer](graphMetadataContainer.md)
 * [GraphPropertyCollection](graphPropertyCollection.ts)
 * [GraphObject](graphObject.ts)
 * [Graph](graph.ts)

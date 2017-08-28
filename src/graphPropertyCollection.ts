@@ -16,6 +16,7 @@
 
 import { GraphSchema } from "./graphSchema";
 import { GraphProperty } from "./graphProperty";
+import { GraphMetadata } from "./graphMetadata";
 
 /**
  * A collection of graph properties in a schema.
@@ -73,9 +74,9 @@ export class GraphPropertyCollection {
     /**
      * Gets the property with the specified id. If one does not exist, a new property is created.
      */
-    public getOrCreate<V = any>(id: string) {
+    public getOrCreate<V = any>(id: string, metadataFactory?: () => GraphMetadata<V>) {
         let property = this.get(id);
-        if (!property) this.add(property = GraphProperty._create(id));
+        if (!property) this.add(property = GraphProperty._create(id, metadataFactory));
         return property as GraphProperty<V>;
     }
 
