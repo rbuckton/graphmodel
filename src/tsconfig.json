@@ -1,6 +1,7 @@
 {
     "compilerOptions": {
         "target": "es2015",
+        "module": "commonjs",
         "strict": true,
         "stripInternal": true,
         "declaration": true,
