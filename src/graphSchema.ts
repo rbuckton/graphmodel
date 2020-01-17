@@ -16,26 +16,31 @@
 
 import { GraphSchemaCollection } from "./graphSchemaCollection";
 import { GraphCategoryCollection } from "./graphCategoryCollection";
-import { GraphCategory } from "./graphCategory";
 import { GraphPropertyCollection } from "./graphPropertyCollection";
-import { GraphProperty } from "./graphProperty";
 import { Graph } from "./graph";
+import { GraphCategory, GraphCategoryIdLike } from "./graphCategory";
+import { GraphProperty, GraphPropertyIdLike } from "./graphProperty";
+import { isGraphSchemaNameLIke } from "./utils";
+
+/**
+ * Represents a valid value for the name of a GraphSchema.
+ */
+export type GraphSchemaNameLike = string | symbol;
 
 /**
  * A GraphSchema defines a related set of graph categories and properties.
  */
 export class GraphSchema {
     private _graph: Graph | undefined;
-    private _name: string;
+    private _name: GraphSchemaNameLike;
     private _schemas: GraphSchemaCollection | undefined;
     private _categories: GraphCategoryCollection | undefined;
     private _properties: GraphPropertyCollection | undefined;
     private _observers: Map<GraphSchemaSubscription, GraphSchemaEvents> | undefined;
 
-    /*@internal*/
-    constructor(name: string, graph: Graph);
-    constructor(name: string);
-    constructor(name: string, graph?: Graph) {
+    constructor(name: GraphSchemaNameLike);
+    /* @internal */ constructor(name: GraphSchemaNameLike, graph: Graph);
+    constructor(name: GraphSchemaNameLike, graph?: Graph) {
         this._name = name;
         this._graph = graph;
     }
@@ -43,33 +48,43 @@ export class GraphSchema {
     /**
      * Gets the graph that owns the schema.
      */
-    public get graph() { return this._graph; }
+    public get graph(): Graph | undefined {
+        return this._graph;
+    }
 
     /**
      * Gets the name of the schema.
      */
-    public get name() { return this._name; }
+    public get name(): GraphSchemaNameLike {
+        return this._name;
+    }
 
     /**
      * Gets the child schemas of this schema.
      */
-    public get schemas() { return this._schemas || (this._schemas = GraphSchemaCollection._create(this)); }
+    public get schemas(): GraphSchemaCollection {
+        return this._schemas ?? (this._schemas = GraphSchemaCollection._create(this));
+    }
 
     /**
      * Gets the categories defined by this schema.
      */
-    public get categories() { return this._categories || (this._categories = GraphCategoryCollection._create(this)); }
+    public get categories(): GraphCategoryCollection {
+        return this._categories ?? (this._categories = GraphCategoryCollection._create(this));
+    }
 
     /**
      * Gets the properties defined by this schema.
      */
-    public get properties() { return this._properties || (this._properties = GraphPropertyCollection._create(this)); }
+    public get properties(): GraphPropertyCollection {
+        return this._properties ?? (this._properties = GraphPropertyCollection._create(this));
+    }
 
     /**
      * Creates a subscription for a set of named events.
      */
-    public subscribe(events: GraphSchemaEvents) {
-        const observers = this._observers || (this._observers = new Map<GraphSchemaSubscription, GraphSchemaEvents>());
+    public subscribe(events: GraphSchemaEvents): GraphSchemaSubscription {
+        const observers = this._observers ?? (this._observers = new Map<GraphSchemaSubscription, GraphSchemaEvents>());
         const subscription: GraphSchemaSubscription = { unsubscribe: () => { observers.delete(subscription); } };
         this._observers.set(subscription, { ...events });
         return subscription;
@@ -78,9 +93,11 @@ export class GraphSchema {
     /**
      * Determines whether this schema contains the provided schema as a child or grandchild.
      */
-    public hasSchema(schema: GraphSchema) {
-        if (schema === this) return true;
-        if (this._schemas) {
+    public hasSchema(schema: GraphSchema | GraphSchemaNameLike): boolean {
+        if (isGraphSchemaNameLIke(schema) ? schema === this.name : schema === this) {
+            return true;
+        }
+        if (this._schemas !== undefined) {
             for (const value of this.schemas.values()) {
                 if (value.hasSchema(schema)) {
                     return true;
@@ -93,7 +110,7 @@ export class GraphSchema {
     /**
      * Adds a child schema to this schema.
      */
-    public addSchema(schema: GraphSchema) {
+    public addSchema(schema: GraphSchema): this {
         this.schemas.add(schema);
         return this;
     }
@@ -103,7 +120,7 @@ export class GraphSchema {
      */
     public * allSchemas(): IterableIterator<GraphSchema> {
         yield this;
-        if (this._schemas) {
+        if (this._schemas !== undefined) {
             for (const schema of this._schemas) {
                 yield* schema.allSchemas();
             }
@@ -113,11 +130,11 @@ export class GraphSchema {
     /**
      * Finds a category in this schema or its descendants.
      */
-    public findCategory(id: string) {
+    public findCategory(id: GraphCategoryIdLike): GraphCategory | undefined {
         for (const schema of this.allSchemas()) {
-            if (schema._categories) {
+            if (schema._categories !== undefined) {
                 const category = schema._categories.get(id);
-                if (category) {
+                if (category !== undefined) {
                     return category;
                 }
             }
@@ -128,9 +145,9 @@ export class GraphSchema {
     /**
      * Creates an iterator for the categories in this schema or its descendants with the provided ids.
      */
-    public * findCategories(...categoryIds: string[]) {
+    public * findCategories(...categoryIds: GraphCategoryIdLike[]): IterableIterator<GraphCategory> {
         for (const schema of this.allSchemas()) {
-            if (schema._categories) {
+            if (schema._categories !== undefined) {
                 yield* schema._categories.values(categoryIds);
             }
         }
@@ -139,11 +156,11 @@ export class GraphSchema {
     /**
      * Finds a property in this schema or its descendants.
      */
-    public findProperty(id: string) {
+    public findProperty(id: GraphPropertyIdLike): GraphProperty | undefined {
         for (const schema of this.allSchemas()) {
-            if (schema._properties) {
+            if (schema._properties !== undefined) {
                 const property = schema._properties.get(id);
-                if (property) {
+                if (property !== undefined) {
                     return property;
                 }
             }
@@ -154,21 +171,18 @@ export class GraphSchema {
     /**
      * Creates an iterator for the properties in this schema or its descendants with the provided ids.
      */
-    public * findProperties(...propertyIds: string[]) {
+    public * findProperties(...propertyIds: GraphPropertyIdLike[]): IterableIterator<GraphProperty> {
         for (const schema of this.allSchemas()) {
-            if (schema._properties) {
+            if (schema._properties !== undefined) {
                 yield* schema._properties.values(propertyIds);
             }
         }
     }
 
-    /*@internal*/
-    public _raiseOnChanged() {
-        if (this._observers) {
+    /* @internal */ _raiseOnChanged() {
+        if (this._observers !== undefined) {
             for (const { onChanged } of this._observers.values()) {
-                if (onChanged) {
-                    onChanged();
-                }
+                onChanged?.();
             }
         }
     }

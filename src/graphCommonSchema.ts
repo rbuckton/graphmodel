@@ -16,15 +16,14 @@
 
 import { GraphSchema } from "./graphSchema";
 import { GraphMetadata, GraphMetadataFlags } from "./graphMetadata";
-import { GraphProperty } from "./graphProperty";
-import { GraphCategory } from "./graphCategory";
-import { GraphNode } from "./graphNode";
+import { GraphNode, GraphNodeIdLike } from "./graphNode";
+import { isGraphNodeIdLike } from "./utils";
 
 export namespace GraphCommonSchema {
     export const Schema = new GraphSchema("GraphCommonSchema.Schema");
-    export const UniqueId = Schema.properties.getOrCreate<string>("UniqueId", () => new GraphMetadata({ flags: GraphMetadataFlags.Immutable }));
-    export const SourceNode = Schema.properties.getOrCreate<GraphNode>("SourceNode", () => new GraphMetadata({ flags: GraphMetadataFlags.Immutable }));
-    export const TargetNode = Schema.properties.getOrCreate<GraphNode>("TargetNode", () => new GraphMetadata({ flags: GraphMetadataFlags.Immutable }));
-    export const IsContainment = Schema.properties.getOrCreate<boolean>("IsContainment", () => new GraphMetadata({ defaultValue: false }));
+    export const UniqueId = Schema.properties.getOrCreate<GraphNodeIdLike>("UniqueId", () => new GraphMetadata<GraphNodeIdLike>({ flags: GraphMetadataFlags.Immutable, validate: isGraphNodeIdLike }));
+    export const SourceNode = Schema.properties.getOrCreate<GraphNode>("SourceNode", () => new GraphMetadata<GraphNode>({ flags: GraphMetadataFlags.Immutable }));
+    export const TargetNode = Schema.properties.getOrCreate<GraphNode>("TargetNode", () => new GraphMetadata<GraphNode>({ flags: GraphMetadataFlags.Immutable }));
+    export const IsContainment = Schema.properties.getOrCreate<boolean>("IsContainment", () => new GraphMetadata<boolean>({ defaultValue: false, validate: (value): value is boolean => typeof value === "boolean" }));
     export const Contains = Schema.categories.getOrCreate("Contains", () => new GraphMetadata({ properties: [[IsContainment, true]] }));
 }

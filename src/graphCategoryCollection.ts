@@ -15,41 +15,49 @@
  */
 
 import { GraphSchema } from "./graphSchema";
-import { GraphCategory } from "./graphCategory";
+import { GraphCategory, GraphCategoryIdLike } from "./graphCategory";
 import { GraphMetadata } from "./graphMetadata";
+import { isGraphCategoryIdLike } from "./utils";
+import { BaseCollection } from "./baseCollection";
 
 /**
  * A collection of graph categories in a schema.
  */
-export class GraphCategoryCollection {
+export class GraphCategoryCollection extends BaseCollection<GraphCategory> {
     private _schema: GraphSchema;
-    private _categories: Map<string, GraphCategory> | undefined;
+    private _categories: Map<GraphCategoryIdLike, GraphCategory> | undefined;
     private _observers: Map<GraphCategoryCollectionSubscription, GraphCategoryCollectionEvents> | undefined;
 
-    /*@internal*/
+    /* @internal */
     public static _create(schema: GraphSchema) {
         return new GraphCategoryCollection(schema);
     }
 
+    /** @private */
     private constructor(schema: GraphSchema) {
+        super();
         this._schema = schema;
     }
 
     /**
      * Gets the schema that owns the collection.
      */
-    public get schema() { return this._schema; }
+    public get schema(): GraphSchema {
+        return this._schema;
+    }
 
     /**
      * Gets the number of categories in the collection.
      */
-    public get size() { return this._categories ? this._categories.size : 0; }
+    public get size(): number {
+        return this._categories?.size ?? 0;
+    }
 
     /**
      * Creates a subscription for a set of named events.
      */
     public subscribe(events: GraphCategoryCollectionEvents) {
-        const observers = this._observers || (this._observers = new Map<GraphCategoryCollectionSubscription, GraphCategoryCollectionEvents>());
+        const observers = this._observers ?? (this._observers = new Map<GraphCategoryCollectionSubscription, GraphCategoryCollectionEvents>());
         const subscription: GraphCategoryCollectionSubscription = { unsubscribe: () => { observers.delete(subscription); } };
         this._observers.set(subscription, { ...events });
         return subscription;
@@ -58,33 +66,37 @@ export class GraphCategoryCollection {
     /**
      * Determines whether the collection contains the specified category.
      */
-    public has(category: GraphCategory) {
-        return this._categories !== undefined
-            && this._categories.get(category.id) === category;
+    public has(category: GraphCategory | GraphCategoryIdLike) {
+        return isGraphCategoryIdLike(category) ?
+            this._categories?.has(category) ?? false :
+            this._categories?.get(category.id) === category;
     }
 
     /**
      * Gets the category with the provided id.
      */
-    public get(id: string) {
-        return this._categories
-            && this._categories.get(id);
+    public get(id: GraphCategoryIdLike) {
+        return this._categories?.get(id);
     }
 
     /**
      * Gets the category with the provided id. If one does not exist, a new category is created.
      */
-    public getOrCreate(id: string, metadataFactory?: () => GraphMetadata) {
+    public getOrCreate(id: GraphCategoryIdLike, metadataFactory?: () => GraphMetadata): GraphCategory {
         let category = this.get(id);
-        if (!category) this.add(category = GraphCategory._create(id, metadataFactory));
+        if (category === undefined) {
+            this.add(category = GraphCategory._create(id, metadataFactory));
+        }
         return category;
     }
 
     /**
      * Adds a category to the collection.
      */
-    public add(category: GraphCategory) {
-        if (!this._categories) this._categories = new Map<string, GraphCategory>();
+    public add(category: GraphCategory): this {
+        if (this._categories === undefined) {
+            this._categories = new Map<GraphCategoryIdLike, GraphCategory>();
+        }
         this._categories.set(category.id, category);
         this._raiseOnAdded(category);
         return this;
@@ -93,13 +105,23 @@ export class GraphCategoryCollection {
     /**
      * Removes a category from the collection.
      */
-    public delete(category: GraphCategory) {
-        if (this._categories) {
-            const ownCategory = this._categories.get(category.id);
-            if (ownCategory) {
-                this._categories.delete(category.id);
+    public delete(category: GraphCategory): boolean;
+    /**
+     * Removes a category from the collection.
+     */
+    public delete(category: GraphCategoryIdLike): GraphCategory | false;
+    /**
+     * Removes a category from the collection.
+     */
+    public delete(category: GraphCategory | GraphCategoryIdLike): GraphCategory | boolean;
+    public delete(category: GraphCategory | GraphCategoryIdLike): GraphCategory | boolean {
+        const id = isGraphCategoryIdLike(category) ? category : category.id;
+        if (this._categories !== undefined) {
+            const ownCategory = this._categories.get(id);
+            if (ownCategory !== undefined) {
+                this._categories.delete(id);
                 this._raiseOnDeleted(ownCategory);
-                return true;
+                return isGraphCategoryIdLike(category) ? ownCategory : true;
             }
         }
         return false;
@@ -108,8 +130,8 @@ export class GraphCategoryCollection {
     /**
      * Removes all categories from the collection.
      */
-    public clear() {
-        if (this._categories) {
+    public clear(): void {
+        if (this._categories !== undefined) {
             for (const category of [...this._categories.values()]) {
                 this.delete(category);
             }
@@ -119,12 +141,14 @@ export class GraphCategoryCollection {
     /**
      * Creates an iterator for the values in the collection.
      */
-    public * values(categoryIds?: Iterable<string>) {
-        if (this._categories) {
-            if (categoryIds) {
+    public * values(categoryIds?: Iterable<GraphCategoryIdLike>): IterableIterator<GraphCategory> {
+        if (this._categories !== undefined) {
+            if (categoryIds !== undefined) {
                 for (const id of categoryIds) {
                     const category = this.get(id);
-                    if (category) yield category;
+                    if (category !== undefined) {
+                        yield category;
+                    }
                 }
             }
             else {
@@ -136,35 +160,35 @@ export class GraphCategoryCollection {
     /**
      * Creates an iterator for the values in the collection.
      */
-    public * [Symbol.iterator]() {
-        yield* this.values();
+    public [Symbol.iterator](): IterableIterator<GraphCategory> {
+        return this.values();
     }
 
     /**
      * Creates an iterator for the categories in the collection based on the provided base category.
      */
-    public * basedOn(base: GraphCategory) {
-        for (const category of this) if (category.isBasedOn(base)) yield category;
+    public * basedOn(base: GraphCategory | GraphCategoryIdLike): IterableIterator<GraphCategory> {
+        for (const category of this.values()) {
+            if (category.isBasedOn(base)) {
+                yield category;
+            }
+        }
     }
 
     private _raiseOnAdded(category: GraphCategory) {
         this._schema._raiseOnChanged();
-        if (this._observers) {
+        if (this._observers !== undefined) {
             for (const { onAdded } of this._observers.values()) {
-                if (onAdded) {
-                    onAdded(category);
-                }
+                onAdded?.(category);
             }
         }
     }
 
     private _raiseOnDeleted(category: GraphCategory) {
         this._schema._raiseOnChanged();
-        if (this._observers) {
+        if (this._observers !== undefined) {
             for (const { onDeleted } of this._observers.values()) {
-                if (onDeleted) {
-                    onDeleted(category);
-                }
+                onDeleted?.(category);
             }
         }
     }

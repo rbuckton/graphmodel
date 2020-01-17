@@ -16,20 +16,26 @@
 
 import { GraphMetadataContainer } from "./graphMetadataContainer";
 import { GraphMetadata } from "./graphMetadata";
+import { isGraphCategoryIdLike } from "./utils";
+
+/**
+ * Represents a valid id for a category.
+ */
+export type GraphCategoryIdLike = string | symbol;
 
 /**
  * Graph catagories are used to categorize graph objects such as nodes or links.
  */
 export class GraphCategory extends GraphMetadataContainer {
-    private _id: string;
+    private _id: GraphCategoryIdLike;
     private _basedOn: GraphCategory | undefined;
 
     /*@internal*/
-    public static _create(id: string, metadataFactory?: () => GraphMetadata) {
+    public static _create(id: GraphCategoryIdLike, metadataFactory?: () => GraphMetadata) {
         return new GraphCategory(id, metadataFactory);
     }
 
-    private constructor(id: string, metadataFactory?: () => GraphMetadata) {
+    private constructor(id: GraphCategoryIdLike, metadataFactory?: () => GraphMetadata) {
         super(metadataFactory);
         this._id = id;
     }
@@ -37,15 +43,22 @@ export class GraphCategory extends GraphMetadataContainer {
     /**
      * Gets the unique id of the category.
      */
-    public get id() { return this._id; }
+    public get id(): GraphCategoryIdLike {
+        return this._id;
+    }
 
     /**
      * Gets or sets the category this category is based on.
      */
-    public get basedOn() { return this._basedOn; }
+    public get basedOn(): GraphCategory | undefined {
+        return this._basedOn;
+    }
+
     public set basedOn(value: GraphCategory | undefined) {
-        if (value && value !== this._basedOn) {
-            if (value.isBasedOn(this)) throw new Error("Invalid attempt to create a circular reference in category inheritance.");
+        if (value !== undefined && value !== this._basedOn) {
+            if (value.isBasedOn(this)) {
+                throw new Error("Invalid attempt to create a circular reference in category inheritance.");
+            }
             this._basedOn = value;
         }
     }
@@ -53,18 +66,27 @@ export class GraphCategory extends GraphMetadataContainer {
     /**
      * Determines whether this category is based on the specified category.
      */
-    public isBasedOn(category: string | GraphCategory) {
-        if (typeof category === "string") {
-            for (let base: GraphCategory | undefined = this; base; base = base.basedOn) {
-                if (base.id === category) return true;
-            }
-        }
-        else {
-            for (let base: GraphCategory | undefined = this; base; base = base.basedOn) {
-                if (base === category) return true;
-            }
-        }
+    public isBasedOn(category: GraphCategoryIdLike | GraphCategory): boolean {
+        return isGraphCategoryIdLike(category) ?
+            this._isBasedOnCategoryId(category) :
+            this._isBasedOnCategory(category);
+    }
 
+    /* @internal */ _isBasedOnCategory(category: GraphCategory): boolean {
+        for (let base: GraphCategory | undefined = this; base; base = base.basedOn) {
+            if (base === category) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /* @internal */ _isBasedOnCategoryId(categoryId: GraphCategoryIdLike): boolean {
+        for (let base: GraphCategory | undefined = this; base; base = base.basedOn) {
+            if (base.id === categoryId) {
+                return true;
+            }
+        }
         return false;
     }
 }

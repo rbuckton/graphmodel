@@ -14,40 +14,46 @@
  * limitations under the License.
  */
 
-import { GraphSchema } from "./graphSchema";
+import { GraphSchema, GraphSchemaNameLike } from "./graphSchema";
+import { isGraphSchemaNameLIke } from "./utils";
+import { BaseCollection } from "./baseCollection";
 
 /**
  * A collection of child schemas in a schema.
  */
-export class GraphSchemaCollection {
+export class GraphSchemaCollection extends BaseCollection<GraphSchema> {
     private _schema: GraphSchema;
-    private _schemas: Map<string, GraphSchema> | undefined;
+    private _schemas: Map<GraphSchemaNameLike, GraphSchema> | undefined;
     private _observers: Map<GraphSchemaCollectionSubscription, GraphSchemaCollectionEvents> | undefined;
 
-    /*@internal*/
-    public static _create(schema: GraphSchema) {
+    /* @internal */ static _create(schema: GraphSchema) {
         return new GraphSchemaCollection(schema);
     }
 
     private constructor(schema: GraphSchema) {
+        super();
         this._schema = schema;
     }
 
     /**
      * Gets the schema that owns the collection.
      */
-    public get schema() { return this._schema; }
+    public get schema(): GraphSchema {
+        return this._schema;
+    }
 
     /**
      * Gets the number of schemas in the collection.
      */
-    public get size() { return this._schemas ? this._schemas.size : 0; }
+    public get size(): number {
+        return this._schemas?.size ?? 0;
+    }
 
     /**
      * Creates a subscription for a set of named events.
      */
-    public subscribe(events: GraphSchemaCollectionEvents) {
-        const observers = this._observers || (this._observers = new Map<GraphSchemaCollectionSubscription, GraphSchemaCollectionEvents>());
+    public subscribe(events: GraphSchemaCollectionEvents): GraphSchemaCollectionSubscription {
+        const observers = this._observers ?? (this._observers = new Map<GraphSchemaCollectionSubscription, GraphSchemaCollectionEvents>());
         const subscription: GraphSchemaCollectionSubscription = { unsubscribe: () => { observers.delete(subscription); } };
         this._observers.set(subscription, { ...events });
         return subscription;
@@ -56,26 +62,30 @@ export class GraphSchemaCollection {
     /**
      * Determines whether the collection contains the specified schema.
      */
-    public has(schema: GraphSchema) {
-        return this._schemas !== undefined
-            && this._schemas.get(schema.name) === schema;
+    public has(schema: GraphSchema | GraphSchemaNameLike): boolean {
+        return isGraphSchemaNameLIke(schema) ?
+            this._schemas?.has(schema) ?? false :
+            this._schemas?.get(schema.name) === schema;
     }
 
     /**
      * Gets the property with the specified name.
      */
-    public get(name: string) {
-        return this._schemas
-            && this._schemas.get(name);
+    public get(name: GraphSchemaNameLike): GraphSchema | undefined {
+        return this._schemas?.get(name);
     }
 
     /**
      * Adds a schema to the collection.
      */
-    public add(schema: GraphSchema) {
-        if (schema.hasSchema(this.schema)) throw new Error("Schemas cannot be circular.");
-        if (!schema.graph) {
-            if (!this._schemas) this._schemas = new Map<string, GraphSchema>();
+    public add(schema: GraphSchema): this {
+        if (schema.hasSchema(this.schema)) {
+            throw new Error("Schemas cannot be circular.");
+        }
+        if (schema.graph === undefined) {
+            if (this._schemas === undefined) {
+                this._schemas = new Map<string, GraphSchema>();
+            }
             this._schemas.set(schema.name, schema);
             schema.subscribe({ onChanged: () => this._schema._raiseOnChanged() });
             this._raiseOnAdded(schema);
@@ -84,26 +94,44 @@ export class GraphSchemaCollection {
     }
 
     /**
-     * Gets the schemas in the collection.
+     * Gets the schema names in the collection.
      */
-    public * values() {
-        if (this._schemas) yield* this._schemas.values();
+    public * keys(): IterableIterator<GraphSchemaNameLike> {
+        if (this._schemas !== undefined) {
+            yield* this._schemas.keys();
+        }
     }
 
     /**
      * Gets the schemas in the collection.
      */
-    public [Symbol.iterator]() {
+    public * values(): IterableIterator<GraphSchema> {
+        if (this._schemas !== undefined) {
+            yield* this._schemas.values();
+        }
+    }
+
+    /**
+     * Gets the schemas in the collection.
+     */
+    public * entries(): IterableIterator<[GraphSchemaNameLike, GraphSchema]> {
+        if (this._schemas !== undefined) {
+            yield* this._schemas.entries();
+        }
+    }
+
+    /**
+     * Gets the schemas in the collection.
+     */
+    public [Symbol.iterator](): IterableIterator<GraphSchema> {
         return this.values();
     }
 
     private _raiseOnAdded(schema: GraphSchema) {
         this._schema._raiseOnChanged();
-        if (this._observers) {
+        if (this._observers !== undefined) {
             for (const { onAdded } of this._observers.values()) {
-                if (onAdded) {
-                    onAdded(schema);
-                }
+                onAdded?.(schema);
             }
         }
     }

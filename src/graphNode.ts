@@ -20,21 +20,26 @@ import { GraphCategory } from "./graphCategory";
 import { GraphObject } from "./graphObject";
 import { GraphLink } from "./graphLink";
 import { Graph } from "./graph";
+import { isGraphNodeIdLike, hasCategoryInSetExact, getCategorySet } from "./utils";
+
+/**
+ * Represents a valid value for the id of a GraphNode.
+ */
+export type GraphNodeIdLike = string | symbol;
 
 /**
  * Represents a node in the directed graph.
  */
 export class GraphNode extends GraphObject {
-    private _id: string;
+    private _id: GraphNodeIdLike;
     private _incomingLinks: Set<GraphLink> | undefined;
     private _outgoingLinks: Set<GraphLink> | undefined;
 
-    /*@internal*/
-    public static _create(owner: Graph, id: string, category?: GraphCategory) {
+    /* @internal */ static _create(owner: Graph, id: GraphNodeIdLike, category?: GraphCategory) {
         return new GraphNode(owner, id, category);
     }
 
-    private constructor(owner: Graph, id: string, category?: GraphCategory) {
+    private constructor(owner: Graph, id: GraphNodeIdLike, category?: GraphCategory) {
         super(owner, category);
         this._id = id;
         this.set(GraphCommonSchema.UniqueId, id);
@@ -43,38 +48,78 @@ export class GraphNode extends GraphObject {
     /**
      * Gets the graph that this object belongs to.
      */
-    public get owner() { return super.owner!; }
+    public get owner(): Graph {
+        return super.owner!;
+    }
 
     /**
      * Gets the document schema for this object.
      */
-    public get schema() { return this.owner.schema; }
+    public get schema(): GraphSchema {
+        return this.owner.schema;
+    }
 
     /**
      * The unique identifier for the node.
      */
-    public get id() { return this._id; }
+    public get id(): GraphNodeIdLike {
+        return this._id;
+    }
+
+    /**
+     * Gets a value indicating whether this node is a container (i.e., has any outgoing containment links).
+     */
+    public get isContainer(): boolean {
+        if (this._outgoingLinks !== undefined) {
+            for (const link of this._outgoingLinks) {
+                if (link.isContainment) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Gets a value indicating whether this node is contained by another node (i.e., has any incoming containment links).
+     */
+    public get isContained(): boolean {
+        if (this._incomingLinks !== undefined) {
+            for (const link of this._incomingLinks) {
+                if (link.isContainment) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 
     /**
      * Gets the number of incoming links.
      */
-    public get incomingLinkCount() { return this._incomingLinks ? this._incomingLinks.size : 0; }
+    public get incomingLinkCount(): number {
+        return this._incomingLinks?.size ?? 0;
+    }
 
     /**
      * Gets the number of outgoing links.
      */
-    public get outgoingLinkCount() { return this._outgoingLinks ? this._outgoingLinks.size : 0; }
+    public get outgoingLinkCount(): number {
+        return this._outgoingLinks?.size ?? 0;
+    }
 
     /**
      * Gets the number of both incoming and outgoing links.
      */
-    public get linkCount() { return this.incomingLinkCount + this.outgoingLinkCount; }
+    public get linkCount(): number {
+        return this.incomingLinkCount + this.outgoingLinkCount;
+    }
 
     /**
      * Creates an iterator for links that have this node as their target.
      */
-    public * incomingLinks(...linkCategories: GraphCategory[]) {
-        if (this._incomingLinks) {
+    public * incomingLinks(...linkCategories: GraphCategory[]): IterableIterator<GraphLink> {
+        if (this._incomingLinks?.size) {
             if (linkCategories.length) {
                 const set = new Set(linkCategories);
                 for (const link of this._incomingLinks) {
@@ -90,9 +135,67 @@ export class GraphNode extends GraphObject {
     }
 
     /**
+     * Returns `true` if the node has at least one incoming link with one of the provided categories; otherwise, `false`.
+     */
+    public hasIncomingLinks(...linkCategories: GraphCategory[]): boolean {
+        if (!this._incomingLinks?.size) {
+            return false;
+        }
+        const set = getCategorySet(linkCategories);
+        for (const link of this._incomingLinks) {
+            if (hasCategoryInSetExact(link, set)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Gets an incoming link from a source node to this node, if one exists.
+     */
+    public getIncomingLink(source: GraphNodeIdLike | GraphNodeIdLike, index: number = 0) {
+        if (this._incomingLinks === undefined) {
+            return undefined;
+        }
+
+        const sourceObj = isGraphNodeIdLike(source) ? this.owner.nodes.get(source) : source;
+        if (sourceObj === undefined || sourceObj.owner !== this.owner) {
+            return undefined;
+        }
+
+        for (const link of this._incomingLinks) {
+            if (link.source === sourceObj && link.index === index) {
+                return link;
+            }
+        }
+
+        return undefined;
+    }
+
+    /**
+     * Deletes any incoming links to this node that have any of the provided categories.
+     * If no categories are provided, all incoming links are deleted.
+     * @returns The number of links that were deleted.
+     */
+    public deleteIncomingLinks(...linkCategories: GraphCategory[]): number {
+        let linksDeleted = 0;
+        if (this._incomingLinks !== undefined) {
+            const set = getCategorySet(linkCategories);
+            for (const link of [...this._incomingLinks]) {
+                if (hasCategoryInSetExact(link, set)) {
+                    if (this.owner.links.delete(link)) {
+                        linksDeleted++;
+                    }
+                }
+            }
+        }
+        return linksDeleted;
+    }
+
+    /**
      * Creates an iterator for links that have this node as their source.
      */
-    public * outgoingLinks(...linkCategories: GraphCategory[]) {
+    public * outgoingLinks(...linkCategories: GraphCategory[]): IterableIterator<GraphLink> {
         if (this._outgoingLinks) {
             if (linkCategories.length) {
                 const set = new Set(linkCategories);
@@ -109,9 +212,65 @@ export class GraphNode extends GraphObject {
     }
 
     /**
+     * Returns `true` if the node has at least one outgoing link with one of the provided categories; otherwise, `false`.
+     */
+    public hasOutgoingLinks(...linkCategories: GraphCategory[]): boolean {
+        if (!this._outgoingLinks?.size) return false;
+        const set = getCategorySet(linkCategories);
+        for (const link of this._outgoingLinks) {
+            if (hasCategoryInSetExact(link, set)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Gets an outgoing link from this node to a target node, if one exists.
+     */
+    public getOutgoingLink(target: GraphNodeIdLike | GraphNodeIdLike, index: number = 0) {
+        if (this._outgoingLinks === undefined) {
+            return undefined;
+        }
+
+        const targetObj = isGraphNodeIdLike(target) ? this.owner.nodes.get(target) : target;
+        if (targetObj === undefined || targetObj.owner !== this.owner) {
+            return undefined;
+        }
+
+        for (const link of this._outgoingLinks) {
+            if (link.target === targetObj && link.index === index) {
+                return link;
+            }
+        }
+
+        return undefined;
+    }
+
+    /**
+     * Deletes any outgoing links from this node that have any of the provided categories.
+     * If no categories are provided, all outgoing links are deleted.
+     * @returns The number of links that were deleted.
+     */
+    public deleteOutgoingLinks(...linkCategories: GraphCategory[]): number {
+        let linksDeleted = 0;
+        if (this._outgoingLinks !== undefined) {
+            const set = getCategorySet(linkCategories);
+            for (const link of [...this._outgoingLinks]) {
+                if (hasCategoryInSetExact(link, set)) {
+                    if (this.owner.links.delete(link)) {
+                        linksDeleted++;
+                    }
+                }
+            }
+        }
+        return linksDeleted;
+    }
+
+    /**
      * Creates an iterator for links that have this node as either their source or their target.
      */
-    public * links(...linkCategories: GraphCategory[]) {
+    public * links(...linkCategories: GraphCategory[]): IterableIterator<GraphLink> {
         if (this._incomingLinks || this._outgoingLinks) {
             if (linkCategories.length) {
                 const set = new Set(linkCategories);
@@ -144,11 +303,30 @@ export class GraphNode extends GraphObject {
     }
 
     /**
+     * Deletes any links to or from this node that have any of the provided categories.
+     * If no categories are provided, all links are deleted.
+     * @returns The number of links that were deleted.
+     */
+    public deleteLinks(...linkCategories: GraphCategory[]): number {
+        let linksDeleted = 0;
+        linksDeleted += this.deleteIncomingLinks(...linkCategories);
+        linksDeleted += this.deleteOutgoingLinks(...linkCategories);
+        return linksDeleted;
+    }
+
+    /**
+     * Removes this node from the graph.
+     */
+    public deleteSelf(): boolean {
+        return this.owner.nodes.delete(this);
+    }
+
+    /**
      * Finds the first node related to this node.
      * @param searchDirection Either `"source"` to find related links across the incoming links of sources, or `"target"` to find related links across the outgoing links of targets.
      * @param traversal An object that specifies callbacks used to control how nodes and links are traversed and which node should be returned.
      */
-    public firstRelated(searchDirection: "source" | "target", traversal?: GraphNodeTraversal) {
+    public firstRelated(searchDirection: "source" | "target", traversal?: GraphNodeTraversal): GraphNode | undefined {
         for (const node of this.related(searchDirection, traversal)) {
             return node;
         }
@@ -159,25 +337,46 @@ export class GraphNode extends GraphObject {
      * @param searchDirection Either `"source"` to find related links across the incoming links of sources, or `"target"` to find related links across the outgoing links of targets.
      * @param traversal An object that specifies callbacks used to control how nodes and links are traversed and which nodes are yielded during iteration.
      */
-    public * related(searchDirection: "source" | "target", { traverseLink, traverseNode, acceptNode }: GraphNodeTraversal = {}) {
+    public * related(searchDirection: "source" | "target", traversal?: GraphNodeTraversal): IterableIterator<GraphNode> {
         const accepted = new Set<GraphNode>();
-        const traversed = new Set<GraphNode>([this]);
+        const traversedNodes = new Set<GraphNode>([this]);
         const traversalQueue: GraphNode[] = [this];
         let node: GraphNode | undefined;
-        while (node = traversalQueue.shift()) {
-            const links = searchDirection === "source" ? node._incomingLinks : node._outgoingLinks;
-            if (links) {
+        while ((node = traversalQueue.shift()) !== undefined) {
+            const links = searchDirection === "source" ?
+                node._incomingLinks :
+                node._outgoingLinks;
+            if (links !== undefined) {
                 for (const link of links) {
-                    if (traverseLink && !traverseLink(link)) continue;
+                    if (!(traversal?.traverseLink?.(link) ?? true)) {
+                        continue;
+                    }
                     const node = searchDirection === "source" ? link.source : link.target;
-                    if (!accepted.has(node) && (!acceptNode || acceptNode(node))) {
+                    if (!accepted.has(node) && (traversal?.acceptNode?.(node) ?? true)) {
                         accepted.add(node);
                         yield node;
                     }
-                    if (!traversed.has(node) && (!traverseNode || traverseNode(node))) {
-                        traversed.add(node);
+                    if (!traversedNodes.has(node) && (traversal?.traverseNode?.(node, link) ?? true)) {
+                        traversedNodes.add(node);
                         traversalQueue.push(node);
                     }
+                }
+            }
+        }
+    }
+
+    /**
+     * Yields each node that either contains this node (if `searchDirection` is `"source"`), or is
+     * contained by this node (if `searchDirection` is `"target"`).
+     */
+    public * relatedContainmentNodes(searchDirection: "source" | "target"): IterableIterator<GraphNode> {
+        const links = searchDirection === "source" ?
+            this._incomingLinks :
+            this._outgoingLinks;
+        if (links !== undefined) {
+            for (const link of links) {
+                if (link.isContainment) {
+                    yield searchDirection === "source" ? link.source : link.target;
                 }
             }
         }
@@ -187,11 +386,11 @@ export class GraphNode extends GraphObject {
      * Creates an iterator for the sources linked to this node.
      * @param linkCategories When specified, links must have at least one of the provided categories.
      */
-    public * sources(...linkCategories: GraphCategory[]) {
-        if (this._incomingLinks) {
-            const set = linkCategories.length && new Set(linkCategories);
+    public * sources(...linkCategories: GraphCategory[]): IterableIterator<GraphNode> {
+        if (this._incomingLinks !== undefined) {
+            const set = getCategorySet(linkCategories);
             for (const link of this._incomingLinks) {
-                if (!set || link.hasCategoryInSet(set, "exact")) {
+                if (hasCategoryInSetExact(link, set)) {
                     yield link.source;
                 }
             }
@@ -202,11 +401,11 @@ export class GraphNode extends GraphObject {
      * Creates an iterator for the targets linked to this node.
      * @param linkCategories When specified, links must have at least one of the provided categories.
      */
-    public * targets(...linkCategories: GraphCategory[]) {
-        if (this._outgoingLinks) {
-            const set = linkCategories.length && new Set(linkCategories);
+    public * targets(...linkCategories: GraphCategory[]): IterableIterator<GraphNode> {
+        if (this._outgoingLinks !== undefined) {
+            const set = getCategorySet(linkCategories);
             for (const link of this._outgoingLinks) {
-                if (!set || link.hasCategoryInSet(set, "exact")) {
+                if (hasCategoryInSetExact(link, set)) {
                     yield link.target;
                 }
             }
@@ -214,18 +413,73 @@ export class GraphNode extends GraphObject {
     }
 
     /**
+     * Yields each node that contains this node
+     */
+    public * ancestors(): IterableIterator<GraphNode> {
+        const set = new Set<GraphNode>();
+        for (const node of this.relatedContainmentNodes("source")) {
+            if (!set.has(node)) {
+                set.add(node);
+                yield node;
+                yield* node.ancestors();
+            }
+        }
+    }
+
+    /**
+     * Yields each node this node contains
+     */
+    public * descendants(): IterableIterator<GraphNode> {
+        const set = new Set<GraphNode>();
+        for (const node of this.relatedContainmentNodes("target")) {
+            if (!set.has(node)) {
+                set.add(node);
+                yield node;
+                yield* node.descendants();
+            }
+        }
+    }
+
+    /**
+     * Walks all incoming links to this node to determine if there are any circularities.
+     * @param linkCategory The category of links to traverse.
+     */
+    public hasCircularity(...linkCategories: GraphCategory[]): boolean {
+        const set = getCategorySet(linkCategories);
+        const traversedNodes = new Set<GraphNode>([this]);
+        const traversalQueue: GraphNode[] = [this];
+        let node: GraphNode | undefined;
+        while ((node = traversalQueue.shift()) !== undefined) {
+            const links = node._incomingLinks;
+            if (links === undefined) {
+                continue;
+            }
+            for (const link of links) {
+                if (hasCategoryInSetExact(link, set)) {
+                    if (traversedNodes.has(link.source)) {
+                        return true;
+                    }
+                    traversedNodes.add(link.source);
+                    traversalQueue.push(link.source);
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
      * Creates a copy of the node (including its links) with a new id.
      */
-    public copy(newId: string) {
+    public copy(newId: GraphNodeIdLike): GraphNode {
         const node = new GraphNode(this.owner, newId);
         node._mergeFrom(this);
-        if (this._outgoingLinks) {
+        if (this._outgoingLinks !== undefined) {
             for (const link of this._outgoingLinks) {
                 GraphLink._create(this.owner, node, link.target, link.index)._mergeFrom(link);
             }
         }
 
-        if (this._incomingLinks) {
+        if (this._incomingLinks !== undefined) {
             for (const link of this._incomingLinks) {
                 GraphLink._create(this.owner, link.source, node, link.index)._mergeFrom(link);
             }
@@ -234,23 +488,29 @@ export class GraphNode extends GraphObject {
         return node;
     }
 
-    /*@internal*/
-    public _addLink(link: GraphLink) {
+    /* @internal */ _addLink(link: GraphLink) {
         if (link.target === this) {
-            if (!this._incomingLinks) this._incomingLinks = new Set<GraphLink>()
+            if (this._incomingLinks === undefined) {
+                this._incomingLinks = new Set<GraphLink>();
+            }
             this._incomingLinks.add(link);
         }
 
         if (link.source === this) {
-            if (!this._outgoingLinks) this._outgoingLinks = new Set<GraphLink>();
+            if (this._outgoingLinks === undefined) {
+                this._outgoingLinks = new Set<GraphLink>();
+            }
             this._outgoingLinks.add(link);
         }
     }
 
-    /*@internal*/
-    public _removeLink(link: GraphLink) {
-        if (this._incomingLinks && link.target === this) this._incomingLinks.delete(link);
-        if (this._outgoingLinks && link.source === this) this._outgoingLinks.delete(link);
+    /* @internal */ _removeLink(link: GraphLink) {
+        if (link.target === this) {
+            this._incomingLinks?.delete(link);
+        }
+        if (link.source === this) {
+            this._outgoingLinks?.delete(link);
+        }
     }
 }
 
@@ -263,7 +523,7 @@ export interface GraphNodeTraversal {
     /**
      * A callback used to determine whether a node should be traversed. If not specified, all nodes are traversed.
      */
-    traverseNode?: (node: GraphNode) => boolean;
+    traverseNode?: (node: GraphNode, link: GraphLink) => boolean;
 
     /**
      * A callback used to determine whether a node should be yielded. If not specified, all nodes are yielded.

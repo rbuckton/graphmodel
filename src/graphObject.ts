@@ -14,13 +14,11 @@
  * limitations under the License.
  */
 
-import { GraphSchema } from "./graphSchema";
-import { GraphCategory } from "./graphCategory";
-import { GraphProperty } from "./graphProperty";
-import { GraphMetadata } from "./graphMetadata";
-import { GraphNode } from "./graphNode";
+import { GraphCategory, GraphCategoryIdLike } from "./graphCategory";
+import { GraphProperty, GraphPropertyIdLike } from "./graphProperty";
 import { Graph } from "./graph";
-import { GraphMetadataContainer } from "./graphMetadataContainer";
+import { GraphSchema } from "./graphSchema";
+import { isIterableObject, isGraphCategoryIdLike, isGraphPropertyIdLIke, getCategorySet } from "./utils";
 
 /**
  * The base definition of an extensible graph object.
@@ -39,28 +37,36 @@ export abstract class GraphObject {
     /**
      * Gets the graph that this object belongs to.
      */
-    public get owner() { return this._owner; }
+    public get owner(): Graph | undefined {
+        return this._owner;
+    }
 
     /**
      * Gets the document schema for this object.
      */
-    public get schema() { return this._owner && this._owner.schema; }
+    public get schema(): GraphSchema | undefined {
+        return this._owner?.schema;
+    }
 
     /**
      * Gets the number of categories in the object.
      */
-    public get categoryCount() { return this._categories ? this._categories.size : 0; }
+    public get categoryCount(): number {
+        return this._categories?.size ?? 0;
+    }
 
     /**
      * Gets the number of properties in the object.
      */
-    public get propertyCount() { return this._properties ? this._properties.size : 0; }
+    public get propertyCount(): number {
+        return this._properties?.size ?? 0;
+    }
 
     /**
      * Creates a subscription for a set of named events.
      */
-    public subscribe(events: GraphObjectEvents) {
-        const observers = this._observers || (this._observers = new Map<GraphObjectSubscription, GraphObjectEvents>());
+    public subscribe(events: GraphObjectEvents): GraphObjectSubscription {
+        const observers = this._observers ?? (this._observers = new Map<GraphObjectSubscription, GraphObjectEvents>());
         const subscription: GraphObjectSubscription = { unsubscribe: () => { observers.delete(subscription); } };
         this._observers.set(subscription, { ...events });
         return subscription;
@@ -69,18 +75,35 @@ export abstract class GraphObject {
     /**
      * Determines whether the object has the specified category or categories.
      */
-    public hasCategory(category: string | GraphCategory | Iterable<GraphCategory>) {
-        if (!this._categories) {
+    public hasCategory(category: GraphCategoryIdLike | GraphCategory | Iterable<GraphCategory | GraphCategoryIdLike>) {
+        return isIterableObject(category) ? this.hasCategoryInSet(category, "exact") :
+            isGraphCategoryIdLike(category) ? this._hasCategoryId(category) :
+            this._hasCategory(category);
+    }
+
+    /* @internal */ _hasCategoryId(categoryId: GraphCategoryIdLike) {
+        if (this._categories === undefined) {
             return false;
         }
-
-        if (isIterableObject(category)) {
-            return this.hasCategoryInSet(new Set(category), "exact");
+        
+        for (const ownCategory of this._categories) {
+            if (ownCategory._isBasedOnCategoryId(categoryId)) {
+                return true;
+            }
         }
 
-        const id = typeof category === "string" ? category : category.id;
-        for (const category of this._categories) {
-            if (category.isBasedOn(id)) return true;
+        return false;
+    }
+
+    /* @internal */ _hasCategory(category: GraphCategory) {
+        if (this._categories === undefined) {
+            return false;
+        }
+        
+        for (const ownCategory of this._categories) {
+            if (ownCategory._isBasedOnCategory(category)) {
+                return true;
+            }
         }
 
         return false;
@@ -90,30 +113,48 @@ export abstract class GraphObject {
      * Determines whether the object has any of the categories in the provided Set.
      * @param match Either `"exact"` to only match any category in the set, or `"inherited"` to match any category or any of its base categories in the set.
      */
-    public hasCategoryInSet(categorySet: ReadonlySet<GraphCategory>, match: "exact" | "inherited") {
-        if (!this._categories) {
+    public hasCategoryInSet(categories: Iterable<GraphCategory | GraphCategoryIdLike>, match: "exact" | "inherited") {
+        if (this._categories === undefined) {
             return false;
         }
 
+        let categorySet = getCategorySet(categories);
+        if (categorySet === undefined) {
+            return false;
+        }
         if (match === "inherited") {
-            let inherited: Set<GraphCategory> | undefined;
-            let category: GraphCategory | undefined;
+            let inherited: Set<GraphCategory | GraphCategoryIdLike> | undefined;
+            let category: GraphCategory | GraphCategoryIdLike | undefined;
             for (category of categorySet) {
-                while (category) {
-                    if (!inherited) inherited = new Set<GraphCategory>();
+                if (isGraphCategoryIdLike(category)) {
+                    category = this.schema?.findCategory(category);
+                }
+                while (category !== undefined) {
+                    if (inherited === undefined) {
+                        inherited = new Set<GraphCategory | GraphCategoryIdLike>();
+                    }
+                    if (isGraphCategoryIdLike(category)) {
+                        inherited.add(category);
+                        category = this.schema?.findCategory(category);
+                        if (!category) {
+                            break;
+                        }
+                    }
                     inherited.add(category);
                     category = category.basedOn;
                 }
             }
-            if (inherited) {
+            if (inherited !== undefined) {
                 categorySet = inherited;
             }
         }
 
         let category: GraphCategory | undefined;
         for (category of this._categories) {
-            while (category) {
-                if (categorySet.has(category)) return true;
+            while (category !== undefined) {
+                if (categorySet.has(category) || categorySet.has(category.id)) {
+                    return true;
+                }
                 category = category.basedOn;
             }
         }
@@ -124,8 +165,10 @@ export abstract class GraphObject {
     /**
      * Adds a category to the object.
      */
-    public addCategory(category: GraphCategory) {
-        if (!this._categories) this._categories = new Set<GraphCategory>();
+    public addCategory(category: GraphCategory): this {
+        if (this._categories === undefined) {
+            this._categories = new Set<GraphCategory>();
+        }
         if (!this._categories.has(category)) {
             this._categories.add(category);
             this._raiseOnCategoryChanged("add", category);
@@ -136,10 +179,23 @@ export abstract class GraphObject {
     /**
      * Deletes a category from the object.
      */
-    public deleteCategory(category: GraphCategory) {
-        if (this._categories && this._categories.delete(category)) {
-            this._raiseOnCategoryChanged("delete", category);
-            return true;
+    public deleteCategory(category: GraphCategory): boolean;
+    /**
+     * Deletes a category from the object.
+     */
+    public deleteCategory(category: GraphCategoryIdLike): GraphCategory | false;
+    /**
+     * Deletes a category from the object.
+     */
+    public deleteCategory(category: GraphCategory | GraphCategoryIdLike): GraphCategory | boolean;
+    public deleteCategory(category: GraphCategory | GraphCategoryIdLike) {
+        const categoryObj = isGraphCategoryIdLike(category) ? this.schema?.findCategory(category) : category;
+        if (categoryObj === undefined) {
+            return undefined;
+        }
+        if (this._categories?.delete(categoryObj)) {
+            this._raiseOnCategoryChanged("delete", categoryObj);
+            return isGraphCategoryIdLike(category) ? categoryObj : true;
         }
         return false;
     }
@@ -147,37 +203,46 @@ export abstract class GraphObject {
     /**
      * Determines whether the object has the specified property or has a category that defines the specified property.
      */
-    public has(key: string | GraphProperty) {
-        const property = typeof key === "string" ? this.schema && this.schema.findProperty(key) : key;
-        return property !== undefined
-            && (this.hasOwn(property) || this._find(property) !== undefined);
+    public has(key: GraphPropertyIdLike | GraphProperty) {
+        const propertyObj = isGraphPropertyIdLIke(key) ? this.schema?.findProperty(key) : key;
+        if (propertyObj === undefined) {
+            return false;
+        }
+        return this.hasOwn(propertyObj) || this._find(propertyObj) !== undefined;
     }
 
     /**
      * Determines whether the object has the specified property.
      */
-    public hasOwn(property: GraphProperty) {
-        return this._properties !== undefined
-            && this._properties.has(property);
+    public hasOwn(property: GraphProperty | GraphPropertyIdLike) {
+        const propertyObj = isGraphPropertyIdLIke(property) ? this.schema?.findProperty(property) : property;
+        if (propertyObj === undefined) {
+            return false;
+        }
+        return this._properties?.has(propertyObj) ?? false;
     }
 
     /**
      * Gets the value for the specified property.
      */
     public get<V>(key: GraphProperty<V>): V | undefined;
-    public get(key: string | GraphProperty): any;
-    public get(key: string | GraphProperty): any {
-        const property = typeof key === "string" ? this.schema && this.schema.findProperty(key) : key;
-        if (!property) return undefined;
-
-        let value = this._properties && this._properties.get(property);
-        if (value === undefined) {
-            const found = this._find(property);
-            value = found && found.get(property);
+    /**
+     * Gets the value for the specified property.
+     */
+    public get(key: GraphPropertyIdLike | GraphProperty): any;
+    public get(key: GraphPropertyIdLike | GraphProperty): any {
+        const propertyObj = isGraphPropertyIdLIke(key) ? this.schema && this.schema.findProperty(key) : key;
+        if (propertyObj === undefined) {
+            return undefined;
         }
 
-        if (value === undefined && this._owner) {
-            const metadata = property.getMetadata(this._owner);
+        let value = this._properties?.get(propertyObj);
+        if (value === undefined) {
+            value = this._find(propertyObj)?.get(propertyObj);
+        }
+
+        if (value === undefined && this._owner !== undefined) {
+            const metadata = propertyObj.getMetadata(this._owner);
             value = metadata.defaultValue;
         }
 
@@ -188,38 +253,57 @@ export abstract class GraphObject {
      * Sets the value for the specified property.
      */
     public set<V>(key: GraphProperty<V>, value: V | undefined): this;
-    public set(key: string | GraphProperty, value: any): this;
-    public set(key: string | GraphProperty, value: any) {
+    /**
+     * Sets the value for the specified property.
+     */
+    public set(key: GraphPropertyIdLike | GraphProperty, value: any): this;
+    public set(key: GraphPropertyIdLike | GraphProperty, value: any) {
         if (value === undefined) {
             this.delete(key);
             return this;
         }
 
-        const property = typeof key === "string" ? this.schema && this.schema.findProperty(key) : key;
-        if (!property) return this;
+        const propertyObj = isGraphPropertyIdLIke(key) ? this.schema?.findProperty(key) : key;
+        if (propertyObj === undefined) {
+            return this;
+        }
 
-        if (!this._properties) this._properties = new Map<GraphProperty, any>();
+        if (this._properties === undefined) {
+            this._properties = new Map<GraphProperty, any>();
+        }
 
-        const ownValue = this._properties.get(property);
-        if (value === ownValue) return this;
+        const ownValue = this._properties.get(propertyObj);
+        if (value === ownValue) {
+            return this;
+        }
 
-        const metadata = this._owner ? property.getMetadata(this._owner) : property.createDefaultMetadata();
-        if (ownValue !== undefined && metadata.isImmutable) return this;
+        const metadata = this._owner ? propertyObj.getMetadata(this._owner) : propertyObj.createDefaultMetadata();
+        if (ownValue !== undefined && metadata.isImmutable) {
+            return this;
+        }
 
-        this._properties.set(property, value);
-        this._raiseOnPropertyChanged(property);
+        if (metadata.canValidate && !metadata.validate(value)) {
+            return this;
+        }
+
+        this._properties.set(propertyObj, value);
+        this._raiseOnPropertyChanged(propertyObj);
         return this;
     }
 
     /**
      * Removes the specified property from the object.
      */
-    public delete(key: string | GraphProperty) {
-        const property = typeof key === "string" ? this.schema && this.schema.findProperty(key) : key;
-        if (!property || !this._properties || !this.hasOwn(property)) return false;
+    public delete(key: GraphPropertyIdLike | GraphProperty): boolean {
+        const property = isGraphPropertyIdLIke(key) ? this.schema?.findProperty(key) : key;
+        if (property === undefined || !this._properties?.has(property)) {
+            return false;
+        }
 
         const metadata = this._owner ? property.getMetadata(this._owner) : property.createDefaultMetadata();
-        if (!metadata.isRemovable) return false;
+        if (!metadata.isRemovable) {
+            return false;
+        }
 
         this._properties.delete(property);
         this._raiseOnPropertyChanged(property);
@@ -229,21 +313,20 @@ export abstract class GraphObject {
     /**
      * Copies the categories of another graph object to this one.
      */
-    public copyCategories(other: GraphObject) {
+    public copyCategories(other: GraphObject): boolean {
+        if (!other._categories?.size) {
+            return false;
+        }
+        if (this._categories === undefined) {
+            this._categories = new Set<GraphCategory>();
+        }
         let changed = false;
-        if (other._categories) {
-            if (!this._categories) this._categories = new Set<GraphCategory>();
-            for (const category of other._categories) {
-                if (!this._categories.has(category)) {
-
-                    if (this._owner) {
-                        this._owner._importMetadata(other._owner, category);
-                    }
-
-                    this._categories.add(category);
-                    this._raiseOnCategoryChanged("add", category);
-                    changed = true;
-                }
+        for (const category of other._categories) {
+            if (!this._categories.has(category)) {
+                this._owner?._importMetadata(other._owner, category);
+                this._categories.add(category);
+                this._raiseOnCategoryChanged("add", category);
+                changed = true;
             }
         }
         return changed;
@@ -252,23 +335,32 @@ export abstract class GraphObject {
     /**
      * Copies the properties and values of another graph object to this one.
      */
-    public copyProperties(other: GraphObject) {
-        if (!other._properties) return false;
-        if (!this._properties) this._properties = new Map<GraphProperty, any>();
+    public copyProperties(other: GraphObject): boolean {
+        if (!other._properties?.size) {
+            return false;
+        }
+        if (this._properties === undefined) {
+            this._properties = new Map<GraphProperty, any>();
+        }
 
         let changed = false;
         for (const [property, value] of other._properties) {
             const ownValue = this._properties.get(property);
-            if (ownValue === value) continue;
-
-            if (this._owner) {
-                const metadata = this._owner._importMetadata(other._owner, property);
-                if (metadata) {
-                    if (!metadata.isSharable) continue;
-                    if (metadata.isImmutable && ownValue !== undefined) continue;
+            if (ownValue === value) {
+                continue;
+            }
+            const metadata = this._owner?._importMetadata(other._owner, property);
+            if (metadata) {
+                if (!metadata.isSharable) {
+                    continue;
+                }
+                if (metadata.isImmutable && ownValue !== undefined) {
+                    continue;
+                }
+                if (metadata.canValidate && !metadata.validate(value)) {
+                    continue;
                 }
             }
-
             this._properties.set(property, value);
             this._raiseOnPropertyChanged(property);
             changed = true;
@@ -280,73 +372,84 @@ export abstract class GraphObject {
     /**
      * Creates an iterator for the properties in the object.
      */
-    public * keys() {
-        if (this._properties) yield* this._properties.keys();
+    public * keys(): IterableIterator<GraphProperty> {
+        if (this._properties !== undefined) {
+            yield* this._properties.keys();
+        }
+    }
+
+    /**
+     * Creates an iterator for the properties in the object.
+     */
+    public * values(): IterableIterator<any> {
+        if (this._properties !== undefined) {
+            yield* this._properties.values();
+        }
     }
 
     /**
      * Creates an iterator for the entries in the object.
      */
-    public * entries() {
-        if (this._properties) yield* this._properties.entries();
+    public * entries(): IterableIterator<[GraphProperty, any]> {
+        if (this._properties !== undefined) {
+            yield* this._properties.entries();
+        }
     }
 
     /**
      * Creates an iterator for the categories in the object.
      */
-    public * categories() {
-        if (this._categories) yield* this._categories.values();
+    public * categories(): IterableIterator<GraphCategory> {
+        if (this._categories !== undefined) {
+            yield* this._categories.values();
+        }
     }
 
     /**
      * Creates an iterator for the entries in the object.
      */
-    public [Symbol.iterator]() {
+    public [Symbol.iterator](): IterableIterator<[GraphProperty, any]> {
         return this.entries();
     }
 
-    /*@internal*/
-    public _setOwner(owner: Graph) {
-        if (owner && !this._owner) {
+    /* @internal */ _setOwner(owner: Graph) {
+        if (owner !== undefined && this._owner === undefined) {
             this._owner = owner;
         }
     }
 
-    /*@internal*/
-    public _mergeFrom(other: this) {
+    /* @internal */ _mergeFrom(other: this) {
         let changed = false;
-        if (this.copyProperties(other)) changed = true;
-        if (this.copyCategories(other)) changed = true;
+        if (this.copyProperties(other)) {
+            changed = true;
+        }
+        if (this.copyCategories(other)) {
+            changed = true;
+        }
         return changed;
     }
 
-    /*@internal*/
-    public _raiseOnCategoryChanged(change: "add" | "delete", category: GraphCategory) {
-        if (this._observers) {
+    /* @internal */ _raiseOnCategoryChanged(change: "add" | "delete", category: GraphCategory) {
+        if (this._observers !== undefined) {
             for (const { onCategoryChanged } of this._observers.values()) {
-                if (onCategoryChanged) {
-                    onCategoryChanged(change, category);
-                }
+                onCategoryChanged?.(change, category);
             }
         }
     }
 
-    /*@internal*/
-    public _raiseOnPropertyChanged(property: GraphProperty) {
-        if (this._observers) {
+    /* @internal */ _raiseOnPropertyChanged(property: GraphProperty) {
+        if (this._observers !== undefined) {
             for (const { onPropertyChanged } of this._observers.values()) {
-                if (onPropertyChanged) {
-                    onPropertyChanged(property.id);
-                }
+                onPropertyChanged?.(property.id);
             }
         }
     }
 
     private _find(property: GraphProperty) {
-        if (this._categories && this._owner) {
+        if (this._categories !== undefined && this._owner !== undefined) {
             let category: GraphCategory | undefined;
             for (category of this._categories) {
-                while (category) {
+                while (category !== undefined) {
                     const metadata = category.getMetadata(this._owner);
                     if (metadata.hasOwn(property)) {
                         return metadata;
@@ -355,7 +458,6 @@ export abstract class GraphObject {
                 }
             }
         }
-
         return undefined;
     }
 }
@@ -369,7 +471,7 @@ export interface GraphObjectEvents {
     /**
      * An event raised when a property changes on the object.
      */
-    onPropertyChanged?: (name: string) => void;
+    onPropertyChanged?: (name: GraphPropertyIdLike) => void;
 }
 
 export interface GraphObjectSubscription {
@@ -377,10 +479,4 @@ export interface GraphObjectSubscription {
      * Stops listening to a set of subscribed events.
      */
     unsubscribe(): void;
-}
-
-function isIterableObject(obj: any): obj is object & Iterable<any> {
-    return obj
-        && typeof obj === "object"
-        && Symbol.iterator in obj;
 }

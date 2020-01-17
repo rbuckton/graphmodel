@@ -30,10 +30,9 @@ export abstract class GraphMetadataContainer<V = any> {
     /**
      * Creates a new metadata object for the container.
      */
-    public createDefaultMetadata() {
+    public createDefaultMetadata(): GraphMetadata<V> {
         const metadataFactory = this._metadataFactory;
-        if (metadataFactory) return metadataFactory();
-        return new GraphMetadata<V>();
+        return metadataFactory?.() ?? new GraphMetadata<V>();
     }
 
     /**
@@ -41,7 +40,9 @@ export abstract class GraphMetadataContainer<V = any> {
      */
     public getMetadata(owner: Graph): GraphMetadata<V> {
         let metadata = owner._getMetadata(this);
-        if (!metadata) owner._setMetadata(this, metadata = this.createDefaultMetadata());
+        if (metadata === undefined) {
+            owner._setMetadata(this, metadata = this.createDefaultMetadata());
+        }
         return metadata;
     }
 }

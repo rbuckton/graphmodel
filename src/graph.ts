@@ -18,11 +18,12 @@ import { GraphSchema } from "./graphSchema";
 import { GraphObject } from "./graphObject";
 import { GraphMetadataContainer } from "./graphMetadataContainer";
 import { GraphMetadata } from "./graphMetadata";
-import { GraphNode } from "./graphNode";
+import { GraphNode, GraphNodeIdLike } from "./graphNode";
 import { GraphNodeCollection } from "./graphNodeCollection";
 import { GraphLink } from "./graphLink";
 import { GraphLinkCollection } from "./graphLinkCollection";
 import { GraphCommonSchema } from "./graphCommonSchema";
+import { isGraphNodeIdLike } from "./utils";
 
 /**
  * A directed graph consisting of nodes and links.
@@ -40,34 +41,38 @@ export class Graph extends GraphObject {
     /**
      * Gets the graph that this object belongs to.
      */
-    public get owner() { return this; }
+    public get owner(): Graph {
+        return this;
+    }
 
     /**
      * Gets the document schema for this object.
      */
-    public get schema() {
-        if (!this._schema) {
-            this._schema = new GraphSchema("#document", this);
-            this._schema.addSchema(GraphCommonSchema.Schema);
-        }
-
-        return this._schema;
+    public get schema(): GraphSchema {
+        return this._schema
+            ?? (this._schema = new GraphSchema("#document", this).addSchema(GraphCommonSchema.Schema));
     }
 
     /**
      * Gets the collection of links in the graph.
      */
-    public get links() { return this._links || (this._links = GraphLinkCollection._create(this)); }
+    public get links(): GraphLinkCollection {
+        return this._links
+            ?? (this._links = GraphLinkCollection._create(this));
+    }
 
     /**
      * Gets the collection of nodes in the graph.
      */
-    public get nodes() { return this._nodes || (this._nodes = GraphNodeCollection._create(this)); }
+    public get nodes(): GraphNodeCollection {
+        return this._nodes
+            ?? (this._nodes = GraphNodeCollection._create(this));
+    }
 
     /**
      * Adds a new schema to the graph.
      */
-    public addSchema(schema: GraphSchema) {
+    public addSchema(schema: GraphSchema): this {
         if (schema !== this.schema) {
             this.schema.addSchema(schema);
         }
@@ -77,14 +82,19 @@ export class Graph extends GraphObject {
     /**
      * Copies the schemas from another graph.
      */
-    public copySchemas(graph: Graph) {
-        if (graph === this) return false;
+    public copySchemas(graph: Graph): boolean {
+        if (graph === this) {
+            return false;
+        }
+
         let changed = false;
         if (graph._metadata) {
-            if (!this._metadata) this._metadata = new Map<GraphMetadataContainer, GraphMetadata>();
+            if (this._metadata === undefined) {
+                this._metadata = new Map<GraphMetadataContainer, GraphMetadata>();
+            }
             for (const [container, metadata] of graph._metadata) {
                 const ownMetadata = this._metadata.get(container);
-                if (ownMetadata) {
+                if (ownMetadata !== undefined) {
                     ownMetadata._mergeFrom(metadata);
                 }
                 else {
@@ -118,8 +128,10 @@ export class Graph extends GraphObject {
     /**
      * Imports a link (along with its source and target nodes) into the graph.
      */
-    public importLink(link: GraphLink) {
-        if (link.owner === this) return link;
+    public importLink(link: GraphLink): GraphLink {
+        if (link.owner === this) {
+            return link;
+        }
         this.copySchemas(link.owner);
         return this._importLink(link);
     }
@@ -137,25 +149,25 @@ export class Graph extends GraphObject {
     /**
      * Clears the links and nodes of the graph.
      */
-    public clear() {
-        if (this._links) this._links.clear();
-        if (this._nodes) this._nodes.clear();
+    public clear(): void {
+        this._links?.clear();
+        this._nodes?.clear();
     }
 
     /**
      * Renames a node.
      * @param newId The new id for the node.
      */
-    public renameNode(node: GraphNode, newId: string): GraphNode;
+    public renameNode(node: GraphNode, newId: GraphNodeIdLike): GraphNode;
     /**
      * Renames a node.
      * @param nodeId The id of the node to rename.
      * @param newId The new id for the node.
      */
-    public renameNode(nodeId: string, newId: string): GraphNode | undefined;
-    public renameNode(node: string | GraphNode, newId: string) {
-        const existingNode = typeof node === "string" ? this.nodes.get(node) : node;
-        if (existingNode) {
+    public renameNode(nodeId: GraphNodeIdLike, newId: GraphNodeIdLike): GraphNode | undefined;
+    public renameNode(node: GraphNodeIdLike | GraphNode, newId: GraphNodeIdLike) {
+        const existingNode = isGraphNodeIdLike(node) ? this._nodes?.get(node) : node;
+        if (existingNode?.owner === this) {
             const newNode = existingNode.copy(newId);
             this.nodes.add(newNode);
             this.nodes.delete(existingNode);
@@ -164,14 +176,12 @@ export class Graph extends GraphObject {
         return undefined;
     }
 
-    /*@internal*/
-    public _getMetadata(container: GraphMetadataContainer) {
+    /* @internal */ _getMetadata(container: GraphMetadataContainer) {
         return this._metadata
             && this._metadata.get(container);
     }
 
-    /*@internal*/
-    public _setMetadata(container: GraphMetadataContainer, metadata: GraphMetadata | undefined) {
+    /* @internal */ _setMetadata(container: GraphMetadataContainer, metadata: GraphMetadata | undefined) {
         if (metadata) {
             if (!this._metadata) this._metadata = new Map<GraphMetadataContainer, GraphMetadata>();
             metadata._setOwner(this);
@@ -182,8 +192,7 @@ export class Graph extends GraphObject {
         }
     }
 
-    /*@internal*/
-    public _importMetadata(other: Graph | undefined, container: GraphMetadataContainer) {
+    /* @internal */ _importMetadata(other: Graph | undefined, container: GraphMetadataContainer) {
         if (!other) return undefined;
         let metadata = other._getMetadata(container);
         if (!metadata) return container.getMetadata(this);

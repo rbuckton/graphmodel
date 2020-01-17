@@ -29,8 +29,7 @@ export class GraphLink extends GraphObject {
     private _target: GraphNode;
     private _index: number;
 
-    /*@internal*/
-    public static _create(owner: Graph, source: GraphNode, target: GraphNode, index: number, category?: GraphCategory) {
+    /* @internal */ static _create(owner: Graph, source: GraphNode, target: GraphNode, index: number, category?: GraphCategory) {
         return new GraphLink(owner, source, target, index, category);
     }
 
@@ -50,57 +49,75 @@ export class GraphLink extends GraphObject {
     /**
      * Gets the graph that this object belongs to.
      */
-    public get owner() { return super.owner!; }
+    public get owner(): Graph {
+        return super.owner!;
+    }
 
     /**
      * Gets the document schema for this object.
      */
-    public get schema() { return this.owner.schema; }
+    public get schema(): GraphSchema {
+        return this.owner.schema;
+    }
 
     /**
      * The source of the link.
      */
-    public get source() { return this._source; }
+    public get source(): GraphNode {
+        return this._source;
+    }
 
     /**
      * The target of the link.
      */
-    public get target() { return this._target; }
+    public get target(): GraphNode {
+        return this._target;
+    }
 
     /**
      * An optional index for the link (default `0`).
      */
-    public get index() { return this._index; }
+    public get index(): number {
+        return this._index;
+    }
 
     /**
      * Gets a value indicating whether this is a containment link.
      */
-    public get isContainment() { return this.get(GraphCommonSchema.IsContainment) || false; }
+    public get isContainment(): boolean {
+        return this.get(GraphCommonSchema.IsContainment) ?? false;
+    }
 
     /**
      * Creates an iterator for the links related to this link.
      * @param searchDirection Either `"source"` to find related links across the incoming links of sources, or `"target"` to find related links across the outgoing links of targets.
      * @param traversal An object that specifies callbacks used to control how links are traversed and which links are yielded during iteration.
      */
-    public * related(searchDirection: "source" | "target", traversal: GraphLinkTraversal = { }) {
-        const { traverseLink, acceptLink } = traversal;
+    public * related(searchDirection: "source" | "target", traversal?: GraphLinkTraversal): IterableIterator<GraphLink> {
         const accepted = new Set<GraphLink>();
         const traversed = new Set<GraphLink>([this]);
         const traversalQueue: GraphLink[] = [this];
         let link: GraphLink | undefined;
-        while (link = traversalQueue.shift()) {
+        while ((link = traversalQueue.shift()) !== undefined) {
             const links = searchDirection === "source" ? link.source.incomingLinks() : link.target.outgoingLinks();
             for (const link of links) {
-                if (!accepted.has(link) && (!acceptLink || acceptLink(link))) {
+                if (!accepted.has(link) && (traversal?.acceptLink?.(link) ?? true)) {
                     accepted.add(link);
                     yield link;
                 }
-                if (!traversed.has(link) && (!traverseLink || traverseLink(link))) {
+                if (!traversed.has(link) && (traversal?.traverseLink?.(link) ?? true)) {
                     traversed.add(link);
                     traversalQueue.push(link);
                 }
             }
         }
+    }
+
+    /**
+     * Removes this link from the graph.
+     */
+    public deleteSelf(): boolean {
+        return this.owner.links.delete(this);
     }
 }
 

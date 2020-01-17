@@ -14,19 +14,21 @@
  * limitations under the License.
  */
 
-import { GraphSchema } from "./graphSchema";
-import { GraphCategory } from "./graphCategory";
-import { GraphProperty } from "./graphProperty";
+import { GraphCategory, GraphCategoryIdLike } from "./graphCategory";
+import { GraphProperty, GraphPropertyIdLike } from "./graphProperty";
 import { GraphLink } from "./graphLink";
-import { GraphNode } from "./graphNode";
+import { GraphNode, GraphNodeIdLike } from "./graphNode";
 import { Graph } from "./graph";
+import { isGraphNodeIdLike, hasCategoryInSetExact, getCategorySet } from "./utils";
+import { BaseCollection } from "./baseCollection";
 
 /**
  * A collection of links within a Graph.
  */
-export class GraphLinkCollection {
+export class GraphLinkCollection extends BaseCollection<GraphLink> {
+    private _size = 0;
     private _graph: Graph;
-    private _links: Map<string, GraphLink> | undefined;
+    private _links: Map<GraphNodeIdLike, Map<GraphNodeIdLike, Map<number, GraphLink>>> | undefined;
     private _observers: Map<GraphLinkCollectionSubscription, GraphLinkCollectionEvents> | undefined;
 
     /*@internal*/
@@ -35,24 +37,29 @@ export class GraphLinkCollection {
     }
 
     private constructor(graph: Graph) {
+        super();
         this._graph = graph;
     }
 
     /**
      * Gets the graph to which this collection belongs.
      */
-    public get graph() { return this._graph; }
+    public get graph(): Graph {
+        return this._graph;
+    }
 
     /**
      * Gets the number of links in the collection.
      */
-    public get size() { return this._links ? this._links.size : 0; }
+    public get size(): number {
+        return this._size;
+    }
 
     /**
      * Creates a subscription for a set of named events.
      */
-    public subscribe(events: GraphLinkCollectionEvents) {
-        const observers = this._observers || (this._observers = new Map<GraphLinkCollectionSubscription, GraphLinkCollectionEvents>());
+    public subscribe(events: GraphLinkCollectionEvents): GraphLinkCollectionSubscription {
+        const observers = this._observers ?? (this._observers = new Map<GraphLinkCollectionSubscription, GraphLinkCollectionEvents>());
         const subscription: GraphLinkCollectionSubscription = { unsubscribe: () => { observers.delete(subscription); } };
         this._observers.set(subscription, { ...events });
         return subscription;
@@ -61,70 +68,81 @@ export class GraphLinkCollection {
     /**
      * Determines whether the collection contains the specified link.
      */
-    public has(link: GraphLink) {
-        const key = linkId(link.source.id, link.target.id, link.index);
-        return this._links !== undefined
-            && this._links.get(key) === link;
+    public has(link: GraphLink): boolean {
+        return this.get(link.source, link.target, link.index) === link;
     }
 
     /**
      * Gets the link for the provided source and target.
      */
-    public get(sourceId: string, targetId: string, index = 0) {
-        const key = linkId(sourceId, targetId, index);
-        return this._links
-            && this._links.get(key);
+    public get(source: GraphNode | GraphNodeIdLike, target: GraphNode | GraphNodeIdLike, index: number = 0): GraphLink | undefined {
+        const sourceId = isGraphNodeIdLike(source) ? source : source.id;
+        const targetId = isGraphNodeIdLike(target) ? target : target.id;
+        return this._links?.get(sourceId)?.get(targetId)?.get(index);
     }
 
     /**
      * Gets the link for the provided source and target. If one is not found, a new link is created.
      */
-    public getOrCreate(source: string | GraphNode, target: string | GraphNode, index?: number): GraphLink;
-
+    public getOrCreate(source: GraphNodeIdLike | GraphNode, target: GraphNodeIdLike | GraphNode, index?: number): GraphLink;
     /**
      * Gets the link for the provided source and target. If one is not found, a new link is created.
      */
-    public getOrCreate(source: string | GraphNode, target: string | GraphNode, category: GraphCategory): GraphLink;
-    public getOrCreate(source: string | GraphNode, target: string | GraphNode, indexOrCategory?: number | GraphCategory) {
-        const sourceId = typeof source === "string" ? source : source.id;
-        const targetId = typeof target === "string" ? target : target.id;
+    public getOrCreate(source: GraphNodeIdLike | GraphNode, target: GraphNodeIdLike | GraphNode, category: GraphCategory): GraphLink;
+    public getOrCreate(source: GraphNodeIdLike | GraphNode, target: GraphNodeIdLike | GraphNode, indexOrCategory?: number | GraphCategory) {
+        const sourceId = isGraphNodeIdLike(source) ? source : source.id;
+        const targetId = isGraphNodeIdLike(target) ? target : target.id;
         const index = typeof indexOrCategory === "number" ? indexOrCategory : 0;
         const category = typeof indexOrCategory === "number" ? undefined : indexOrCategory;
         let link = this.get(sourceId, targetId, index);
-        if (!link) {
+        if (link === undefined) {
             const source = this.graph.nodes.getOrCreate(sourceId);
             const target = this.graph.nodes.getOrCreate(targetId);
             link = GraphLink._create(this.graph, source, target, index, category);
             this.add(link);
         }
-        else if (category) {
+        else if (category !== undefined) {
             link.addCategory(category);
         }
-
         return link;
     }
 
     /**
      * Adds a link to the collection.
      */
-    public add(link: GraphLink) {
-        const key = linkId(link.source.id, link.target.id, link.index);
-        if (!this._links) this._links = new Map<string, GraphLink>();
-        const ownLink = this._links.get(key);
-        if (ownLink) {
+    public add(link: GraphLink): this {
+        const sourceId = link.source.id;
+        const targetId = link.target.id;
+        const index = link.index;
+        if (this._links === undefined) {
+            this._links = new Map();
+        }
+
+        let targetMap = this._links.get(sourceId);
+        if (targetMap === undefined) {
+            this._links.set(sourceId, targetMap = new Map());
+        }
+
+        let indexMap = targetMap.get(targetId);
+        if (indexMap === undefined) {
+            targetMap.set(targetId, indexMap = new Map());
+        }
+
+        const ownLink = indexMap.get(index);
+        if (ownLink !== undefined) {
             if (ownLink !== link) {
                 ownLink._mergeFrom(link);
             }
         }
         else if (this.graph.importLink(link) === link) {
-            this._links.set(key, link);
+            this._size++;
+            indexMap.set(index, link);
             link.source._addLink(link);
             link.target._addLink(link);
             this.graph.nodes.add(link.source);
             this.graph.nodes.add(link.target);
             this._raiseOnAdded(link);
         }
-
         return this;
     }
 
@@ -135,12 +153,13 @@ export class GraphLinkCollection {
     /**
      * Removes the link with the specified source, target, and category from the collection.
      */
-    public delete(sourceId: string, targetId: string, category: GraphCategory): GraphLink;
-    public delete(linkOrSourceId: GraphLink | string, targetId?: string, category?: GraphCategory) {
-        if (this._links) {
-            let sourceId: string;
+    public delete(sourceId: GraphNodeIdLike, targetId: GraphNodeIdLike, category: GraphCategory): GraphLink | false;
+    public delete(linkOrSourceId: GraphLink | GraphNodeIdLike, targetId?: GraphNodeIdLike, category?: GraphCategory) {
+        if (this._links !== undefined) {
+            let sourceId: GraphNodeIdLike;
             let index: number;
-            if (typeof linkOrSourceId === "string") {
+            if (isGraphNodeIdLike(linkOrSourceId)) {
+                if (targetId === undefined) throw new TypeError("Argument expected: targetId");
                 sourceId = linkOrSourceId;
                 index = 0;
             }
@@ -150,39 +169,52 @@ export class GraphLinkCollection {
                 index = linkOrSourceId.index;
             }
 
-            const key = linkId(sourceId, targetId!, index);
-            const ownLink = this._links.get(key);
-            if (ownLink) {
-                let remove: boolean;
-                if (category !== undefined) {
-                    ownLink.deleteCategory(category);
-                    remove = ownLink.categoryCount === 0;
-                }
-                else {
-                    remove = true;
-                }
-                if (remove) {
-                    this._links.delete(key);
-                    ownLink.source._removeLink(ownLink);
-                    ownLink.target._removeLink(ownLink);
-                    this._raiseOnDeleted(ownLink);
-                    return typeof linkOrSourceId === "string" ? ownLink : true;
+            const targetMap = this._links.get(sourceId);
+            if (targetMap !== undefined) {
+                const indexMap = targetMap.get(targetId);
+                if (indexMap !== undefined) {
+                    const ownLink = indexMap.get(index);
+                    if (ownLink !== undefined) {
+                        let remove: boolean;
+                        if (category !== undefined) {
+                            ownLink.deleteCategory(category);
+                            remove = ownLink.categoryCount === 0;
+                        }
+                        else {
+                            remove = true;
+                        }
+                        if (remove) {
+                            indexMap.delete(index);
+                            if (indexMap.size === 0) {
+                                targetMap.delete(targetId);
+                                if (targetMap.size === 0) {
+                                    this._links.delete(sourceId);
+                                }
+                            }
+                            this._size--;
+                            ownLink.source._removeLink(ownLink);
+                            ownLink.target._removeLink(ownLink);
+                            this._raiseOnDeleted(ownLink);
+                            return isGraphNodeIdLike(linkOrSourceId) ? ownLink : true;
+                        }
+                    }
                 }
             }
         }
-        return typeof linkOrSourceId === "string" ? undefined : false;
+        return false;
     }
 
     /**
      * Removes all links from the collection.
      */
-    public clear() {
-        if (this._links) {
-            for (const ownLink of this) {
+    public clear(): void {
+        if (this._links !== undefined) {
+            for (const ownLink of this.values()) {
                 ownLink.source._removeLink(ownLink);
                 ownLink.target._removeLink(ownLink);
             }
 
+            this._size = 0;
             this._links.clear();
         }
     }
@@ -190,30 +222,40 @@ export class GraphLinkCollection {
     /**
      * Creates an iterator for the values in the collection.
      */
-    public * values() {
-        if (this._links) yield* this._links.values();
+    public * values(): IterableIterator<GraphLink> {
+        if (this._links !== undefined) {
+            for (const targetMap of this._links.values()) {
+                for (const indexMap of targetMap.values()) {
+                    yield* indexMap.values();
+                }
+            }
+        }
     }
 
     /**
      * Creates an iterator for the values in the collection.
      */
-    public [Symbol.iterator]() {
+    public [Symbol.iterator](): IterableIterator<GraphLink> {
         return this.values();
     }
 
     /**
      * Creates an iterator for each link between a source and a target node.
      */
-    public * between(source: GraphNode, target: GraphNode) {
-        if (source.outgoingLinkCount && target.incomingLinkCount) {
+    public * between(source: GraphNode, target: GraphNode): IterableIterator<GraphLink> {
+        if (source.outgoingLinkCount > 0 && target.incomingLinkCount > 0) {
             if (source.outgoingLinkCount < target.incomingLinkCount) {
                 for (const outgoing of source.outgoingLinks()) {
-                    if (outgoing.target === target) yield outgoing;
+                    if (outgoing.target === target) {
+                        yield outgoing;
+                    }
                 }
             }
             else {
                 for (const incoming of target.incomingLinks()) {
-                    if (incoming.source === source) yield incoming;
+                    if (incoming.source === source) {
+                        yield incoming;
+                    }
                 }
             }
         }
@@ -222,19 +264,31 @@ export class GraphLinkCollection {
     /**
      * Creates an iterator for each incoming link to a node.
      */
-    public * to(node: string | GraphNode, ...categories: GraphCategory[]) {
-        const set = categories.length && new Set(categories);
-        const target = typeof node === "string" ? this.graph.nodes.get(node) : node;
-        if (target) for (const incoming of target.incomingLinks()) if (!set || incoming.hasCategoryInSet(set, "exact")) yield incoming;
+    public * to(node: GraphNodeIdLike | GraphNode, ...linkCategories: (GraphCategory | GraphCategoryIdLike)[]): IterableIterator<GraphLink> {
+        const set = getCategorySet(linkCategories);
+        const target = isGraphNodeIdLike(node) ? this.graph.nodes.get(node) : node;
+        if (target !== undefined) {
+            for (const incoming of target.incomingLinks()) {
+                if (hasCategoryInSetExact(incoming, set)) {
+                    yield incoming;
+                }
+            }
+        }
     }
 
     /**
      * Creates an iterator for each outgoing link from a node.
      */
-    public * from(node: string | GraphNode, ...categories: GraphCategory[]) {
-        const set = categories.length && new Set(categories);
-        const source = typeof node === "string" ? this.graph.nodes.get(node) : node;
-        if (source) for (const outgoing of source.outgoingLinks()) if (!set || outgoing.hasCategoryInSet(set, "exact")) yield outgoing;
+    public * from(node: GraphNodeIdLike | GraphNode, ...linkCategories: (GraphCategory | GraphCategoryIdLike)[]): IterableIterator<GraphLink> {
+        const set = getCategorySet(linkCategories);
+        const source = isGraphNodeIdLike(node) ? this.graph.nodes.get(node) : node;
+        if (source !== undefined) {
+            for (const outgoing of source.outgoingLinks()) {
+                if (hasCategoryInSetExact(outgoing, set)) {
+                    yield outgoing;
+                }
+            }
+        }
     }
 
     /**
@@ -244,42 +298,39 @@ export class GraphLinkCollection {
     /**
      * Creates an iterator for each link with the specified property key and value.
      */
-    public byProperty(key: string | GraphProperty, value: any): IterableIterator<GraphLink>;
-    public * byProperty(key: string | GraphProperty, value: any) {
-        for (const link of this) if (link.get(key) === value) yield link;
+    public byProperty(key: GraphPropertyIdLike | GraphProperty, value: any): IterableIterator<GraphLink>;
+    public * byProperty(key: GraphPropertyIdLike | GraphProperty, value: any) {
+        for (const link of this.values()) {
+            if (link.get(key) === value) {
+                yield link;
+            }
+        }
     }
 
     /**
      * Creates an iterator for each link with any of the specified categories.
      */
-    public * byCategory(...categories: GraphCategory[]) {
-        const set = categories.length && new Set(categories);
-        for (const link of this) if (!set || link.hasCategoryInSet(set, "exact")) yield link;
-    }
-
-    /**
-     * Creates an iterator for each link matching the provided callback.
-     */
-    public * filter(cb: (link: GraphLink) => boolean) {
-        for (const link of this) if (cb(link)) yield link;
+    public * byCategory(...linkCategories: (GraphCategory | GraphCategoryIdLike)[]): IterableIterator<GraphLink> {
+        const set = getCategorySet(linkCategories);
+        for (const link of this.values()) {
+            if (hasCategoryInSetExact(link, set)) {
+                yield link;
+            }
+        }
     }
 
     private _raiseOnAdded(link: GraphLink) {
-        if (this._observers) {
+        if (this._observers !== undefined) {
             for (const { onAdded } of this._observers.values()) {
-                if (onAdded) {
-                    onAdded(link);
-                }
+                onAdded?.(link);
             }
         }
     }
 
     private _raiseOnDeleted(link: GraphLink) {
-        if (this._observers) {
+        if (this._observers !== undefined) {
             for (const { onDeleted } of this._observers.values()) {
-                if (onDeleted) {
-                    onDeleted(link);
-                }
+                onDeleted?.(link);
             }
         }
     }

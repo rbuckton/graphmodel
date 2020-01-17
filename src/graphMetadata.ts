@@ -15,21 +15,26 @@
  */
 
 import { GraphObject } from "./graphObject";
-import { Graph } from "./graph";
 import { GraphProperty } from "./graphProperty";
 
 /**
  * Graph metadata defines information about a GraphProperty or GraphCategory.
  */
 export class GraphMetadata<V = any> extends GraphObject {
+    private _label: string;
+    private _description: string;
     private _defaultValue: V | undefined;
+    private _validate?: (value: any) => value is V;
     private _flags: GraphMetadataFlags;
 
-    constructor({ defaultValue, properties, flags = GraphMetadataFlags.Default }: GraphMetadataOptions<V> = {}) {
+    constructor({ label = "", description = "", defaultValue, properties, flags = GraphMetadataFlags.Default, validate }: GraphMetadataOptions<V> = {}) {
         super();
+        this._label = label;
+        this._description = description;
         this._defaultValue = defaultValue;
         this._flags = flags;
-        if (properties) {
+        this._validate = validate;
+        if (properties !== undefined) {
             for (const [property, value] of properties) {
                 this.set(property, value);
             }
@@ -37,41 +42,95 @@ export class GraphMetadata<V = any> extends GraphObject {
     }
 
     /**
+     * Gets a descriptive label for the property.
+     */
+    public get label(): string {
+        return this._label;
+    }
+
+    /**
+     * Gets a description for the property.
+     */
+    public get description(): string {
+        return this._description;
+    }
+
+    /**
      * Gets the default value for a property. Only used for a GraphMetadata associated with a property.
      */
-    public get defaultValue() { return this._defaultValue; }
+    public get defaultValue(): V | undefined {
+        return this._defaultValue;
+    }
 
     /**
      * Gets the flags that control the behavior of a property or category.
      */
-    public get flags() { return this._flags; }
+    public get flags(): GraphMetadataFlags {
+        return this._flags;
+    }
 
     /**
      * Gets a value indicating whether the property can be changed once it is set.
      */
-    public get isImmutable() { return !!(this._flags & GraphMetadataFlags.Immutable); }
+    public get isImmutable(): boolean {
+        return !!(this._flags & GraphMetadataFlags.Immutable);
+    }
 
     /**
      * Gets a value indicating whether the property can be removed.
      */
-    public get isRemovable() { return !!(this._flags & GraphMetadataFlags.Removable); }
+    public get isRemovable(): boolean {
+        return !!(this._flags & GraphMetadataFlags.Removable);
+    }
 
     /**
      * Gets a value indicating whether the property can be shared.
      */
-    public get isSharable() { return !!(this._flags & GraphMetadataFlags.Sharable); }
+    public get isSharable(): boolean {
+        return !!(this._flags & GraphMetadataFlags.Sharable);
+    }
+
+    /**
+     * Gets a value indicating whether the property can be validated.
+     */
+    public get canValidate(): boolean {
+        return !!this._validate;
+    }
 
     /**
      * Creates a copy of the metadata.
      */
-    public copy() {
+    public copy(): GraphMetadata<V> {
         const copy = new GraphMetadata();
         copy._mergeFrom(this);
+        copy._label = this.label;
+        copy._description = this._description;
+        copy._defaultValue = this._defaultValue;
+        copy._flags = this._flags;
+        copy._validate = this._validate;
         return copy;
+    }
+
+    /**
+     * Validates a value for a property.
+     */
+    public validate(value: any): value is V {
+        const validate = this._validate;
+        return validate?.(value) ?? true;
     }
 }
 
 export interface GraphMetadataOptions<V = any> {
+    /**
+     * A descriptive label for the property.
+     */
+    label?: string;
+
+    /** 
+     * A description for the property.
+     */
+    description?: string;
+
     /**
      * The default value for a graph property. Only used for a GraphMetadata associated with a property.
      */
@@ -85,7 +144,12 @@ export interface GraphMetadataOptions<V = any> {
     /**
      * Properties to define on the metadata object. Only used for a GraphMetadata associated with a category.
      */
-    properties?: Iterable<[GraphProperty, any]>;
+    properties?: Iterable<readonly [GraphProperty, any]>;
+
+    /**
+     * A callback used to validate whether a property value is valid.
+     */
+    validate?: (value: any) => value is V;
 }
 
 export const enum GraphMetadataFlags {
