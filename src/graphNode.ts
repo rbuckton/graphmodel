@@ -16,7 +16,7 @@
 
 import { GraphSchema } from "./graphSchema";
 import { GraphCommonSchema } from "./graphCommonSchema";
-import { GraphCategory } from "./graphCategory";
+import { GraphCategory, GraphCategoryIdLike } from "./graphCategory";
 import { GraphObject } from "./graphObject";
 import { GraphLink } from "./graphLink";
 import { Graph } from "./graph";
@@ -118,12 +118,15 @@ export class GraphNode extends GraphObject {
     /**
      * Creates an iterator for links that have this node as their target.
      */
-    public * incomingLinks(...linkCategories: GraphCategory[]): IterableIterator<GraphLink> {
+    public incomingLinks(...linkCategories: GraphCategory[]): IterableIterator<GraphLink> {
+        return this._incomingLinksWorker(getCategorySet(linkCategories));
+    }
+
+    private * _incomingLinksWorker(set: ReadonlySet<GraphCategory | GraphCategoryIdLike> | undefined) {
         if (this._incomingLinks?.size) {
-            if (linkCategories.length) {
-                const set = new Set(linkCategories);
+            if (set) {
                 for (const link of this._incomingLinks) {
-                    if (link.hasCategoryInSet(set, "exact")) {
+                    if (hasCategoryInSetExact(link, set)) {
                         yield link;
                     }
                 }
@@ -446,22 +449,31 @@ export class GraphNode extends GraphObject {
      */
     public hasCircularity(...linkCategories: GraphCategory[]): boolean {
         const set = getCategorySet(linkCategories);
-        const traversedNodes = new Set<GraphNode>([this]);
-        const traversalQueue: GraphNode[] = [this];
-        let node: GraphNode | undefined;
-        while ((node = traversalQueue.shift()) !== undefined) {
-            const links = node._incomingLinks;
-            if (links === undefined) {
-                continue;
-            }
-            for (const link of links) {
-                if (hasCategoryInSetExact(link, set)) {
-                    if (traversedNodes.has(link.source)) {
-                        return true;
-                    }
-                    traversedNodes.add(link.source);
-                    traversalQueue.push(link.source);
+        const visited = new Set<GraphNode>();
+        const recStack = new Set<GraphNode>();
+        const nodeStack: GraphNode[] = [this];
+        const doneStack: boolean[] = [false];
+        while (nodeStack.length) {
+            const frame = nodeStack.length - 1;
+            const node = nodeStack[frame];
+            if (!doneStack[frame]) {
+                if (recStack.has(node)) {
+                    return true;
                 }
+                if (!visited.has(node)) {
+                    visited.add(node);
+                    recStack.add(node);
+                    for (const link of node._incomingLinksWorker(set)) {
+                        nodeStack.push(link.source);
+                        doneStack.push(false);
+                    }
+                }
+                doneStack[frame] = true;
+            }
+            else {
+                nodeStack.length = frame;
+                doneStack.length = frame;
+                recStack.delete(node);
             }
         }
         return false;
