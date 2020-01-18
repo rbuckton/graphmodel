@@ -23,7 +23,7 @@ import { GraphNodeCollection } from "./graphNodeCollection";
 import { GraphLink } from "./graphLink";
 import { GraphLinkCollection } from "./graphLinkCollection";
 import { GraphCommonSchema } from "./graphCommonSchema";
-import { isGraphNodeIdLike } from "./utils";
+import { isGraphNodeIdLike } from "./validators";
 
 /**
  * A directed graph consisting of nodes and links.

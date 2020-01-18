@@ -17,7 +17,7 @@
 import { GraphSchema } from "./graphSchema";
 import { GraphCategory, GraphCategoryIdLike } from "./graphCategory";
 import { GraphMetadata } from "./graphMetadata";
-import { isGraphCategoryIdLike } from "./utils";
+import { isGraphCategoryIdLike } from "./validators";
 import { BaseCollection } from "./baseCollection";
 
 /**

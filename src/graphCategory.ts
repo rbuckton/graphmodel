@@ -16,7 +16,7 @@
 
 import { GraphMetadataContainer } from "./graphMetadataContainer";
 import { GraphMetadata } from "./graphMetadata";
-import { isGraphCategoryIdLike } from "./utils";
+import { isGraphCategoryIdLike } from "./validators";
 
 /**
  * Represents a valid id for a category.

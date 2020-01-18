@@ -20,7 +20,8 @@ import { GraphCategory, GraphCategoryIdLike } from "./graphCategory";
 import { GraphObject } from "./graphObject";
 import { GraphLink } from "./graphLink";
 import { Graph } from "./graph";
-import { isGraphNodeIdLike, hasCategoryInSetExact, getCategorySet } from "./utils";
+import { hasCategoryInSetExact, getCategorySet } from "./utils";
+import { isGraphNodeIdLike } from "./validators";
 
 /**
  * Represents a valid value for the id of a GraphNode.
@@ -92,6 +93,17 @@ export class GraphNode extends GraphObject {
             }
         }
         return false;
+    }
+
+    /**
+     * Gets or sets a descriptive label to associate with this node.
+     */
+    public get label() {
+        return this.get(GraphCommonSchema.Label);
+    }
+
+    public set label(label: string | undefined) {
+        this.set(GraphCommonSchema.Label, label);
     }
 
     /**

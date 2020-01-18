@@ -18,7 +18,9 @@ import { GraphCategory, GraphCategoryIdLike } from "./graphCategory";
 import { GraphProperty, GraphPropertyIdLike } from "./graphProperty";
 import { Graph } from "./graph";
 import { GraphSchema } from "./graphSchema";
-import { isIterableObject, isGraphCategoryIdLike, isGraphPropertyIdLIke, getCategorySet } from "./utils";
+import { isIterableObject, getCategorySet } from "./utils";
+import { isGraphCategoryIdLike, isGraphPropertyIdLike } from "./validators";
+import { GraphCommonSchema } from "./graphCommonSchema";
 
 /**
  * The base definition of an extensible graph object.
@@ -46,6 +48,13 @@ export abstract class GraphObject {
      */
     public get schema(): GraphSchema | undefined {
         return this._owner?.schema;
+    }
+
+    public get isPseudo(): boolean {
+        return this.get(GraphCommonSchema.IsPseudo) ?? false;
+    }
+    public set isPseudo(value: boolean) {
+        this.set(GraphCommonSchema.IsPseudo, value || undefined);
     }
 
     /**
@@ -204,7 +213,7 @@ export abstract class GraphObject {
      * Determines whether the object has the specified property or has a category that defines the specified property.
      */
     public has(key: GraphPropertyIdLike | GraphProperty) {
-        const propertyObj = isGraphPropertyIdLIke(key) ? this.schema?.findProperty(key) : key;
+        const propertyObj = isGraphPropertyIdLike(key) ? this.schema?.findProperty(key) : key;
         if (propertyObj === undefined) {
             return false;
         }
@@ -215,7 +224,7 @@ export abstract class GraphObject {
      * Determines whether the object has the specified property.
      */
     public hasOwn(property: GraphProperty | GraphPropertyIdLike) {
-        const propertyObj = isGraphPropertyIdLIke(property) ? this.schema?.findProperty(property) : property;
+        const propertyObj = isGraphPropertyIdLike(property) ? this.schema?.findProperty(property) : property;
         if (propertyObj === undefined) {
             return false;
         }
@@ -231,7 +240,7 @@ export abstract class GraphObject {
      */
     public get(key: GraphPropertyIdLike | GraphProperty): any;
     public get(key: GraphPropertyIdLike | GraphProperty): any {
-        const propertyObj = isGraphPropertyIdLIke(key) ? this.schema && this.schema.findProperty(key) : key;
+        const propertyObj = isGraphPropertyIdLike(key) ? this.schema && this.schema.findProperty(key) : key;
         if (propertyObj === undefined) {
             return undefined;
         }
@@ -263,7 +272,7 @@ export abstract class GraphObject {
             return this;
         }
 
-        const propertyObj = isGraphPropertyIdLIke(key) ? this.schema?.findProperty(key) : key;
+        const propertyObj = isGraphPropertyIdLike(key) ? this.schema?.findProperty(key) : key;
         if (propertyObj === undefined) {
             return this;
         }
@@ -282,7 +291,7 @@ export abstract class GraphObject {
             return this;
         }
 
-        if (metadata.canValidate && !metadata.validate(value)) {
+        if (!propertyObj._validate(value)) {
             return this;
         }
 
@@ -295,7 +304,7 @@ export abstract class GraphObject {
      * Removes the specified property from the object.
      */
     public delete(key: GraphPropertyIdLike | GraphProperty): boolean {
-        const property = isGraphPropertyIdLIke(key) ? this.schema?.findProperty(key) : key;
+        const property = isGraphPropertyIdLike(key) ? this.schema?.findProperty(key) : key;
         if (property === undefined || !this._properties?.has(property)) {
             return false;
         }
@@ -355,9 +364,6 @@ export abstract class GraphObject {
                     continue;
                 }
                 if (metadata.isImmutable && ownValue !== undefined) {
-                    continue;
-                }
-                if (metadata.canValidate && !metadata.validate(value)) {
                     continue;
                 }
             }

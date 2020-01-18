@@ -17,8 +17,10 @@
 import { GraphSchema } from "./graphSchema";
 import { GraphProperty, GraphPropertyIdLike } from "./graphProperty";
 import { GraphMetadata } from "./graphMetadata";
-import { isGraphPropertyIdLIke } from "./utils";
+import { isGraphPropertyIdLike } from "./validators";
 import { BaseCollection } from "./baseCollection";
+import { TypeOfDataTypeName, DataTypeNameLike, DataType } from "./dataType";
+import { isDataTypeNameLike } from "./utils";
 
 /**
  * A collection of graph properties in a schema.
@@ -65,7 +67,7 @@ export class GraphPropertyCollection extends BaseCollection<GraphProperty> {
      * Determines whether the collection contains the specified property.
      */
     public has(property: GraphProperty | GraphPropertyIdLike): boolean {
-        return isGraphPropertyIdLIke(property) ?
+        return isGraphPropertyIdLike(property) ?
             this._properties?.has(property) ?? false :
             this._properties?.get(property.id) === property;
     }
@@ -80,12 +82,54 @@ export class GraphPropertyCollection extends BaseCollection<GraphProperty> {
     /**
      * Gets the property with the specified id. If one does not exist, a new property is created.
      */
-    public getOrCreate<V = any>(id: GraphPropertyIdLike, metadataFactory?: () => GraphMetadata<V>): GraphProperty<V> {
+    public getOrCreate<V = any>(id: GraphPropertyIdLike, metadataFactory?: () => GraphMetadata<V>): GraphProperty<V>;
+    /**
+     * Gets the property with the specified id. If one does not exist, a new property is created.
+     */
+    public getOrCreate<V = any>(id: GraphPropertyIdLike, dataType?: DataType<V> | readonly DataType<V>[], metadataFactory?: () => GraphMetadata<V>): GraphProperty<V>;
+    /**
+     * Gets the property with the specified id. If one does not exist, a new property is created.
+     */
+    public getOrCreate<D extends DataTypeNameLike, Q extends string, V extends TypeOfDataTypeName<D, Q> = TypeOfDataTypeName<D, Q>>(id: GraphPropertyIdLike, dataType: D, packageQualifier: Q, metadataFactory?: () => GraphMetadata<V>): GraphProperty<V>;
+    /**
+     * Gets the property with the specified id. If one does not exist, a new property is created.
+     */
+    public getOrCreate<D extends readonly DataTypeNameLike[], V extends TypeOfDataTypeName<D[number]> = TypeOfDataTypeName<D[number]>>(id: GraphPropertyIdLike, dataType: D, metadataFactory?: () => GraphMetadata<V>): GraphProperty<V>;
+    public getOrCreate(id: GraphPropertyIdLike, dataTypes?: DataTypeNameLike | DataType | readonly (DataTypeNameLike | DataType)[] | (() => GraphMetadata), packageQualifier?: string | (() => GraphMetadata), metadataFactory?: () => GraphMetadata): GraphProperty {
+        if (typeof dataTypes === "function") {
+            packageQualifier = dataTypes;
+            dataTypes = undefined;
+        }
+        if (typeof packageQualifier === "function") {
+            metadataFactory = packageQualifier;
+            packageQualifier = undefined;
+        }
+
+        let dataType: DataType | undefined;
+        if (isDataTypeNameLike(dataTypes)) {
+            dataType = this.schema.findDataType(dataTypes, packageQualifier) ??
+                this.schema.dataTypes.getOrCreate(dataTypes, packageQualifier);
+        }
+        else if ((Array.isArray as (value: any) => value is ReadonlyArray<any>)(dataTypes)) {
+            const resolvedDataTypes: DataType[] = [];
+            for (const dataType of dataTypes) {
+                resolvedDataTypes.push(
+                    isDataTypeNameLike(dataType) ?
+                        this.schema.findDataType(dataType) ?? this.schema.dataTypes.getOrCreate(dataType) :
+                        dataType);
+            }
+            dataTypes = DataType.union(...resolvedDataTypes);
+        }
+        else {
+            dataType = dataTypes;
+        }
+
         let property = this.get(id);
         if (property === undefined) {
-            this.add(property = GraphProperty._create(id, metadataFactory));
+            this.add(property = GraphProperty._create(id, dataType, metadataFactory));
         }
-        return property as GraphProperty<V>;
+
+        return property as GraphProperty;
     }
 
     /**
@@ -113,13 +157,13 @@ export class GraphPropertyCollection extends BaseCollection<GraphProperty> {
      */
     public delete(property: GraphProperty | GraphPropertyIdLike): GraphProperty | boolean;
     public delete(property: GraphProperty | GraphPropertyIdLike): GraphProperty | boolean {
-        const id = isGraphPropertyIdLIke(property) ? property : property.id;
+        const id = isGraphPropertyIdLike(property) ? property : property.id;
         if (this._properties !== undefined) {
             const ownProperty = this._properties.get(id);
             if (ownProperty !== undefined) {
                 this._properties.delete(id);
                 this._raiseOnDeleted(ownProperty);
-                return isGraphPropertyIdLIke(property) ? ownProperty : true;
+                return isGraphPropertyIdLike(property) ? ownProperty : true;
             }
         }
         return false;

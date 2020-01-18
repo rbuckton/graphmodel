@@ -89,6 +89,17 @@ export class GraphLink extends GraphObject {
     }
 
     /**
+     * Gets or sets a descriptive label to associate with this link.
+     */
+    public get label() {
+        return this.get(GraphCommonSchema.Label);
+    }
+
+    public set label(label: string | undefined) {
+        this.set(GraphCommonSchema.Label, label);
+    }
+
+    /**
      * Creates an iterator for the links related to this link.
      * @param searchDirection Either `"source"` to find related links across the incoming links of sources, or `"target"` to find related links across the outgoing links of targets.
      * @param traversal An object that specifies callbacks used to control how links are traversed and which links are yielded during iteration.

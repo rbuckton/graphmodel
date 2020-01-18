@@ -16,33 +16,29 @@
 
 import { GraphMetadataContainer } from "./graphMetadataContainer";
 import { GraphMetadata } from "./graphMetadata";
+import { Graph } from "./graph";
+import { DataType } from "./dataType";
 
 /**
  * Represents a valid value for the id of a GraphProperty.
  */
 export type GraphPropertyIdLike = string | symbol;
 
-declare const DataType: unique symbol;
-
 /**
  * Graph properties are used to annotate graph objects such as nodes or links.
  */
 export class GraphProperty<V = any> extends GraphMetadataContainer<V> {
-    /**
-     * The underlying data type of the property. This will never have a value and is only used for type checking and type inference purposes.
-     */
-    public readonly [DataType]: V;
-
     private _id: GraphPropertyIdLike;
+    private _dataType: DataType<V> | undefined;
 
-    /*@internal*/
-    public static _create<V>(id: GraphPropertyIdLike, metadataFactory?: () => GraphMetadata<V>) {
-        return new GraphProperty<V>(id, metadataFactory);
+    /* @internal */ static _create<V>(id: GraphPropertyIdLike, dataType: DataType<V> | undefined, metadataFactory?: () => GraphMetadata<V>) {
+        return new GraphProperty<V>(id, dataType, metadataFactory);
     }
 
-    private constructor(id: GraphPropertyIdLike, metadataFactory?: () => GraphMetadata<V>) {
+    private constructor(id: GraphPropertyIdLike, dataType: DataType<V> | undefined, metadataFactory?: () => GraphMetadata<V>) {
         super(metadataFactory);
         this._id = id;
+        this._dataType = dataType;
     }
 
     /**
@@ -50,5 +46,16 @@ export class GraphProperty<V = any> extends GraphMetadataContainer<V> {
      */
     public get id(): GraphPropertyIdLike {
         return this._id;
+    }
+
+    /**
+     * Gets the name of the underlying data type for this property;
+     */
+    public get dataType(): DataType<V> | undefined {
+        return this._dataType;
+    }
+
+    /* @internal */ _validate(value: any) {
+        return this._dataType?.validate(value) ?? true;
     }
 }

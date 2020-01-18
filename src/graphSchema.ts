@@ -14,13 +14,15 @@
  * limitations under the License.
  */
 
+import { DataTypeCollection } from "./dataTypeCollection";
 import { GraphSchemaCollection } from "./graphSchemaCollection";
 import { GraphCategoryCollection } from "./graphCategoryCollection";
 import { GraphPropertyCollection } from "./graphPropertyCollection";
-import { Graph } from "./graph";
+import { DataTypeNameLike, DataType } from "./dataType";
 import { GraphCategory, GraphCategoryIdLike } from "./graphCategory";
 import { GraphProperty, GraphPropertyIdLike } from "./graphProperty";
-import { isGraphSchemaNameLIke } from "./utils";
+import { Graph } from "./graph";
+import { isGraphSchemaNameLike } from "./validators";
 
 /**
  * Represents a valid value for the name of a GraphSchema.
@@ -34,6 +36,7 @@ export class GraphSchema {
     private _graph: Graph | undefined;
     private _name: GraphSchemaNameLike;
     private _schemas: GraphSchemaCollection | undefined;
+    private _dataTypes: DataTypeCollection | undefined;
     private _categories: GraphCategoryCollection | undefined;
     private _properties: GraphPropertyCollection | undefined;
     private _observers: Map<GraphSchemaSubscription, GraphSchemaEvents> | undefined;
@@ -81,6 +84,13 @@ export class GraphSchema {
     }
 
     /**
+     * Gets the data types defined by this schema.
+     */
+    public get dataTypes(): DataTypeCollection {
+        return this._dataTypes ?? (this._dataTypes = DataTypeCollection._create(this));
+    }
+
+    /**
      * Creates a subscription for a set of named events.
      */
     public subscribe(events: GraphSchemaEvents): GraphSchemaSubscription {
@@ -94,7 +104,7 @@ export class GraphSchema {
      * Determines whether this schema contains the provided schema as a child or grandchild.
      */
     public hasSchema(schema: GraphSchema | GraphSchemaNameLike): boolean {
-        if (isGraphSchemaNameLIke(schema) ? schema === this.name : schema === this) {
+        if (isGraphSchemaNameLike(schema) ? schema === this.name : schema === this) {
             return true;
         }
         if (this._schemas !== undefined) {
@@ -177,6 +187,21 @@ export class GraphSchema {
                 yield* schema._properties.values(propertyIds);
             }
         }
+    }
+
+    /**
+     * Finds a data type in this schema or its descendants.
+     */
+    public findDataType(name: DataTypeNameLike, packageQualifier?: string): DataType | undefined {
+        for (const schema of this.allSchemas()) {
+            if (schema._dataTypes !== undefined) {
+                const dataType = schema._dataTypes.get(name, packageQualifier);
+                if (dataType !== undefined) {
+                    return dataType;
+                }
+            }
+        }
+        return undefined;
     }
 
     /* @internal */ _raiseOnChanged() {

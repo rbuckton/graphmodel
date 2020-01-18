@@ -18,7 +18,8 @@ import { GraphCategory } from "./graphCategory";
 import { GraphProperty, GraphPropertyIdLike } from "./graphProperty";
 import { GraphNode, GraphNodeIdLike } from "./graphNode";
 import { Graph } from "./graph";
-import { isGraphNodeIdLike, getCategorySet, hasCategoryInSetExact } from "./utils";
+import { hasCategoryInSetExact, getCategorySet } from "./utils";
+import { isGraphNodeIdLike } from "./validators";
 import { BaseCollection } from "./baseCollection";
 
 /**

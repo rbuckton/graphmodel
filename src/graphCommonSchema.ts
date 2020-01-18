@@ -16,14 +16,45 @@
 
 import { GraphSchema } from "./graphSchema";
 import { GraphMetadata, GraphMetadataFlags } from "./graphMetadata";
-import { GraphNode, GraphNodeIdLike } from "./graphNode";
-import { isGraphNodeIdLike } from "./utils";
+import { DataType } from "./dataType";
+import * as validators from "./validators";
 
 export namespace GraphCommonSchema {
     export const Schema = new GraphSchema("GraphCommonSchema.Schema");
-    export const UniqueId = Schema.properties.getOrCreate<GraphNodeIdLike>("UniqueId", () => new GraphMetadata<GraphNodeIdLike>({ flags: GraphMetadataFlags.Immutable, validate: isGraphNodeIdLike }));
-    export const SourceNode = Schema.properties.getOrCreate<GraphNode>("SourceNode", () => new GraphMetadata<GraphNode>({ flags: GraphMetadataFlags.Immutable }));
-    export const TargetNode = Schema.properties.getOrCreate<GraphNode>("TargetNode", () => new GraphMetadata<GraphNode>({ flags: GraphMetadataFlags.Immutable }));
-    export const IsContainment = Schema.properties.getOrCreate<boolean>("IsContainment", () => new GraphMetadata<boolean>({ defaultValue: false, validate: (value): value is boolean => typeof value === "boolean" }));
+    export const DataTypes = {
+        string: (Schema.dataTypes.add(DataType.string), DataType.string),
+        symbol: (Schema.dataTypes.add(DataType.symbol), DataType.symbol),
+        number: (Schema.dataTypes.add(DataType.number), DataType.number),
+        bigint: (Schema.dataTypes.add(DataType.bigint), DataType.bigint),
+        boolean: (Schema.dataTypes.add(DataType.boolean), DataType.boolean),
+        object: (Schema.dataTypes.add(DataType.object), DataType.object),
+        function: (Schema.dataTypes.add(DataType.function), DataType.function),
+        null: (Schema.dataTypes.add(DataType.null), DataType.null),
+        undefined: (Schema.dataTypes.add(DataType.undefined), DataType.undefined),
+        unknown: (Schema.dataTypes.add(DataType.unknown), DataType.unknown),
+        never: (Schema.dataTypes.add(DataType.never), DataType.never),
+        any: (Schema.dataTypes.add(DataType.any), DataType.any),
+        GraphNode: Schema.dataTypes.getOrCreate("graphModel!GraphNode", validators.isGraphNode),
+        GraphNodeIdLike: Schema.dataTypes.getOrCreate("graphModel!GraphNodeIdLike", validators.isGraphNodeIdLike),
+        GraphLink: Schema.dataTypes.getOrCreate("graphModel!GraphLink", validators.isGraphLink),
+        GraphProperty: Schema.dataTypes.getOrCreate("graphModel!GraphProperty", validators.isGraphProperty),
+        GraphPropertyIdLike: Schema.dataTypes.getOrCreate("graphModel!GraphPropertyIdLike", validators.isGraphPropertyIdLike),
+        GraphCategory: Schema.dataTypes.getOrCreate("graphModel!GraphCategory", validators.isGraphCategory),
+        GraphCategoryIdLike: Schema.dataTypes.getOrCreate("graphModel!GraphCategoryIdLike", validators.isGraphCategoryIdLike),
+        GraphObject: Schema.dataTypes.getOrCreate("graphModel!GraphObject", validators.isGraphObject),
+        GraphMetadata: Schema.dataTypes.getOrCreate("graphModel!GraphMetadata", validators.isGraphMetadata),
+        GraphSchema: Schema.dataTypes.getOrCreate("graphModel!GraphSchema", validators.isGraphSchema),
+        GraphSchemaNameLike: Schema.dataTypes.getOrCreate("graphModel!GraphSchemaNameLike", validators.isGraphSchemaNameLike),
+        Graph: Schema.dataTypes.getOrCreate("graphModel!Graph", validators.isGraph),
+    };
+    export const BaseUri = Schema.properties.getOrCreate("BaseUri", DataTypes.string, () => new GraphMetadata({ flags: GraphMetadataFlags.Removable }));
+    export const Version = Schema.properties.getOrCreate("Version", DataTypes.number, () => new GraphMetadata({ flags: GraphMetadataFlags.Removable }));
+    export const SourceNode = Schema.properties.getOrCreate("SourceNode", DataTypes.GraphNode, () => new GraphMetadata({ flags: GraphMetadataFlags.Immutable }));
+    export const TargetNode = Schema.properties.getOrCreate("TargetNode", DataTypes.GraphNode, () => new GraphMetadata({ flags: GraphMetadataFlags.Immutable }));
+    export const IsContainment = Schema.properties.getOrCreate("IsContainment", DataTypes.boolean, () => new GraphMetadata({ defaultValue: false }));
+    export const IsPseudo = Schema.properties.getOrCreate("IsPseudo", DataTypes.boolean, () => new GraphMetadata({ defaultValue: false, flags: GraphMetadataFlags.Removable | GraphMetadataFlags.Serializable | GraphMetadataFlags.Sharable }));
+    export const IsTag = Schema.properties.getOrCreate("IsTag", DataTypes.boolean, () => new GraphMetadata({ defaultValue: false }));
+    export const Label = Schema.properties.getOrCreate("Label", DataTypes.string, () => new GraphMetadata());
+    export const UniqueId = Schema.properties.getOrCreate("UniqueId", DataTypes.GraphNodeIdLike, () => new GraphMetadata({ flags: GraphMetadataFlags.Immutable }));
     export const Contains = Schema.categories.getOrCreate("Contains", () => new GraphMetadata({ properties: [[IsContainment, true]] }));
 }

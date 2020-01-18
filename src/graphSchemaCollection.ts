@@ -15,7 +15,7 @@
  */
 
 import { GraphSchema, GraphSchemaNameLike } from "./graphSchema";
-import { isGraphSchemaNameLIke } from "./utils";
+import { isGraphSchemaNameLike } from "./validators";
 import { BaseCollection } from "./baseCollection";
 
 /**
@@ -63,7 +63,7 @@ export class GraphSchemaCollection extends BaseCollection<GraphSchema> {
      * Determines whether the collection contains the specified schema.
      */
     public has(schema: GraphSchema | GraphSchemaNameLike): boolean {
-        return isGraphSchemaNameLIke(schema) ?
+        return isGraphSchemaNameLike(schema) ?
             this._schemas?.has(schema) ?? false :
             this._schemas?.get(schema.name) === schema;
     }

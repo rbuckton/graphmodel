@@ -16,27 +16,10 @@
 
 import { GraphObject } from "./graphObject";
 import { GraphCategory, GraphCategoryIdLike } from "./graphCategory";
-import { GraphNodeIdLike } from "./graphNode";
-import { GraphPropertyIdLike } from "./graphProperty";
-import { GraphSchemaNameLike } from "./graphSchema";
+import { DataTypeNameLike, DataType } from "./dataType";
 
 /* @internal */
-export function isGraphNodeIdLike(value: any): value is GraphNodeIdLike {
-    return typeof value === "string" || typeof value === "symbol";
-}
-
-/* @internal */
-export function isGraphCategoryIdLike(value: any): value is GraphCategoryIdLike {
-    return typeof value === "string" || typeof value === "symbol";
-}
-
-/* @internal */
-export function isGraphPropertyIdLIke(value: any): value is GraphPropertyIdLike {
-    return typeof value === "string" || typeof value === "symbol";
-}
-
-/* @internal */
-export function isGraphSchemaNameLIke(value: any): value is GraphSchemaNameLike {
+export function isDataTypeNameLike(value: any): value is DataTypeNameLike {
     return typeof value === "string" || typeof value === "symbol";
 }
 
@@ -68,4 +51,39 @@ function toSetOrUndefined<T>(iterable: Iterable<T>): Set<T> | undefined {
         set.add(value);
     }
     return set;
+}
+
+/* @internal */
+export class DataTypeKey {
+    readonly name: DataTypeNameLike;
+    readonly packageQualifier: string;
+
+    private constructor(name: DataTypeNameLike, packageQualifier: string) {
+        this.name = name;
+        this.packageQualifier = packageQualifier;
+    }
+
+    static fromDataType(dataType: DataType) {
+        return new DataTypeKey(dataType.name, dataType.packageQualifier);
+    }
+
+    static fromSymbol(name: symbol) {
+        return new DataTypeKey(name, /*packageQualifier*/ "");
+    }
+
+    static fromString(name: string, packageQualifier?: string) {
+        if (packageQualifier === undefined) {
+            const match = /^([^!]+)!(.+)$/.exec(name);
+            if (match) {
+                return new DataTypeKey(match[1], match[2]);
+            }
+        }
+        return new DataTypeKey(name, packageQualifier ?? "");
+    }
+
+    static from(type: DataTypeNameLike | DataType, packageQualifier?: string) {
+        return typeof type === "symbol" ? this.fromSymbol(type) :
+            typeof type === "string" ? this.fromString(type, packageQualifier) :
+            this.fromDataType(type);
+    }
 }

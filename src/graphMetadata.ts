@@ -23,17 +23,24 @@ import { GraphProperty } from "./graphProperty";
 export class GraphMetadata<V = any> extends GraphObject {
     private _label: string;
     private _description: string;
+    private _group: string;
     private _defaultValue: V | undefined;
-    private _validate?: (value: any) => value is V;
     private _flags: GraphMetadataFlags;
 
-    constructor({ label = "", description = "", defaultValue, properties, flags = GraphMetadataFlags.Default, validate }: GraphMetadataOptions<V> = {}) {
+    constructor({
+        label = "",
+        description = "",
+        group = "",
+        defaultValue,
+        properties,
+        flags = GraphMetadataFlags.Default,
+    }: GraphMetadataOptions<V> = {}) {
         super();
         this._label = label;
         this._description = description;
+        this._group = group;
         this._defaultValue = defaultValue;
         this._flags = flags;
-        this._validate = validate;
         if (properties !== undefined) {
             for (const [property, value] of properties) {
                 this.set(property, value);
@@ -42,31 +49,58 @@ export class GraphMetadata<V = any> extends GraphObject {
     }
 
     /**
-     * Gets a descriptive label for the property.
+     * Gets or sets a descriptive label for the property.
      */
     public get label(): string {
         return this._label;
     }
 
+    public set label(value: string) {
+        this._label = value;
+    }
+
     /**
-     * Gets a description for the property.
+     * Gets or sets a description for the property.
      */
     public get description(): string {
         return this._description;
     }
 
+    public set description(value: string) {
+        this._description = value;
+    }
+
     /**
-     * Gets the default value for a property. Only used for a GraphMetadata associated with a property.
+     * Gets or sets a group for the property.
+     */
+    public get group(): string {
+        return this._group;
+    }
+
+    public set group(value: string) {
+        this._group = value;
+    }
+
+    /**
+     * Gets or sets the default value for a property. Only used for a GraphMetadata associated with a property.
      */
     public get defaultValue(): V | undefined {
         return this._defaultValue;
     }
 
+    public set defaultValue(value: V | undefined) {
+        this._defaultValue = value;
+    }
+
     /**
-     * Gets the flags that control the behavior of a property or category.
+     * Gets or sets the flags that control the behavior of a property or category.
      */
     public get flags(): GraphMetadataFlags {
         return this._flags;
+    }
+
+    public set flags(flags: GraphMetadataFlags) {
+        this._flags = flags;
     }
 
     /**
@@ -83,6 +117,20 @@ export class GraphMetadata<V = any> extends GraphObject {
         return !!(this._flags & GraphMetadataFlags.Removable);
     }
 
+    // /**
+    //  * Gets a value indicating whether the property can be browsed.
+    //  */
+    // public get isBrowsable(): boolean {
+    //     return !!(this._flags & GraphMetadataFlags.Browsable);
+    // }
+
+    /**
+     * Gets a value indicating whether the property can be serialized.
+     */
+    public get isSerializable(): boolean {
+        return !!(this._flags & GraphMetadataFlags.Serializable);
+    }
+
     /**
      * Gets a value indicating whether the property can be shared.
      */
@@ -91,32 +139,18 @@ export class GraphMetadata<V = any> extends GraphObject {
     }
 
     /**
-     * Gets a value indicating whether the property can be validated.
-     */
-    public get canValidate(): boolean {
-        return !!this._validate;
-    }
-
-    /**
      * Creates a copy of the metadata.
      */
     public copy(): GraphMetadata<V> {
-        const copy = new GraphMetadata();
+        const copy = new GraphMetadata({
+            label: this._label,
+            description: this._description,
+            group: this._group,
+            flags: this._flags,
+            defaultValue: this._defaultValue,
+        });
         copy._mergeFrom(this);
-        copy._label = this.label;
-        copy._description = this._description;
-        copy._defaultValue = this._defaultValue;
-        copy._flags = this._flags;
-        copy._validate = this._validate;
         return copy;
-    }
-
-    /**
-     * Validates a value for a property.
-     */
-    public validate(value: any): value is V {
-        const validate = this._validate;
-        return validate?.(value) ?? true;
     }
 }
 
@@ -126,10 +160,15 @@ export interface GraphMetadataOptions<V = any> {
      */
     label?: string;
 
-    /** 
+    /**
      * A description for the property.
      */
     description?: string;
+
+    /**
+     * A group for the property.
+     */
+    group?: string;
 
     /**
      * The default value for a graph property. Only used for a GraphMetadata associated with a property.
@@ -145,17 +184,16 @@ export interface GraphMetadataOptions<V = any> {
      * Properties to define on the metadata object. Only used for a GraphMetadata associated with a category.
      */
     properties?: Iterable<readonly [GraphProperty, any]>;
-
-    /**
-     * A callback used to validate whether a property value is valid.
-     */
-    validate?: (value: any) => value is V;
 }
 
 export const enum GraphMetadataFlags {
     None = 0,
     Immutable = 1 << 0,
     Removable = 1 << 1,
+    // Browsable = 1 << 2,
+    Serializable = 1 << 3,
+    // Substitutable = 1 << 4,
     Sharable = 1 << 5,
-    Default = Removable | Sharable
+    // Undoable = 1 << 6,
+    Default = Removable | Sharable /* | Browsable */ | Serializable
 }
