@@ -79,8 +79,8 @@ export namespace GraphCommonSchema {
     }
     export declare const BaseUri: import("./graphProperty").GraphProperty<string>;
     export declare const Version: import("./graphProperty").GraphProperty<number>;
-    export declare const SourceNode: import("./graphProperty").GraphProperty<any>;
-    export declare const TargetNode: import("./graphProperty").GraphProperty<any>;
+    export declare const SourceNode: import("./graphProperty").GraphProperty<import("./graphNode").GraphNode>;
+    export declare const TargetNode: import("./graphProperty").GraphProperty<import("./graphNode").GraphNode>;
     export declare const IsContainment: import("./graphProperty").GraphProperty<boolean>;
     export declare const IsPseudo: import("./graphProperty").GraphProperty<boolean>;
     export declare const IsTag: import("./graphProperty").GraphProperty<boolean>;
@@ -117,8 +117,8 @@ lazyInit(GraphCommonSchema, "DataTypes", () => ({
 }));
 lazyInit(GraphCommonSchema, "BaseUri", () => GraphCommonSchema.Schema.properties.getOrCreate("BaseUri", GraphCommonSchema.DataTypes.string, () => new GraphMetadata({ flags: GraphMetadataFlags.Removable })));
 lazyInit(GraphCommonSchema, "Version", () => GraphCommonSchema.Schema.properties.getOrCreate("Version", GraphCommonSchema.DataTypes.number, () => new GraphMetadata({ flags: GraphMetadataFlags.Removable })));
-lazyInit(GraphCommonSchema, "SourceNode", () => GraphCommonSchema.Schema.properties.getOrCreate("SourceNode", GraphCommonSchema.DataTypes.object /*GraphNode*/, () => new GraphMetadata({ flags: GraphMetadataFlags.Immutable })));
-lazyInit(GraphCommonSchema, "TargetNode", () => GraphCommonSchema.Schema.properties.getOrCreate("TargetNode", GraphCommonSchema.DataTypes.object /*GraphNode*/, () => new GraphMetadata({ flags: GraphMetadataFlags.Immutable })));
+lazyInit(GraphCommonSchema, "SourceNode", () => GraphCommonSchema.Schema.properties.getOrCreate("SourceNode", GraphCommonSchema.DataTypes.GraphNode, () => new GraphMetadata({ flags: GraphMetadataFlags.Immutable })));
+lazyInit(GraphCommonSchema, "TargetNode", () => GraphCommonSchema.Schema.properties.getOrCreate("TargetNode", GraphCommonSchema.DataTypes.GraphNode, () => new GraphMetadata({ flags: GraphMetadataFlags.Immutable })));
 lazyInit(GraphCommonSchema, "IsContainment", () => GraphCommonSchema.Schema.properties.getOrCreate("IsContainment", GraphCommonSchema.DataTypes.boolean, () => new GraphMetadata({ defaultValue: false })));
 lazyInit(GraphCommonSchema, "IsPseudo", () => GraphCommonSchema.Schema.properties.getOrCreate("IsPseudo", GraphCommonSchema.DataTypes.boolean, () => new GraphMetadata({ defaultValue: false, flags: GraphMetadataFlags.Removable | GraphMetadataFlags.Serializable | GraphMetadataFlags.Sharable })));
 lazyInit(GraphCommonSchema, "IsTag", () => GraphCommonSchema.Schema.properties.getOrCreate("IsTag", GraphCommonSchema.DataTypes.boolean, () => new GraphMetadata({ defaultValue: false })));

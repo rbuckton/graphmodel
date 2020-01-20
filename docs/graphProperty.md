@@ -1,3 +1,9 @@
+<details>
+<summary>In This Article</summary>
+<li><a href="#graphproperty">GraphProperty</a></li>
+<li><a href="#graphpropertyidlike">GraphPropertyIdLike</a></li>
+</details>
+
 # GraphProperty
 ```ts
 /**
@@ -8,17 +14,31 @@ export declare class GraphProperty<V = any> extends GraphMetadataContainer<V> {
     /**
      * The unique id of the property.
      */
-    readonly id: string;
+    get id(): GraphPropertyIdLike;
     /**
-     * The underlying data type of the property. This will never have a value and is only used for type checking and type inference purposes.
+     * Gets the name of the underlying data type for this property;
      */
-    readonly ["[[DataType]]"]: V;
+    get dataType(): DataType<V> | undefined;
 }
 ```
 
 ### See Also
-* [GraphMetadataContainer](graphMetadataContainer.md)
-* [GraphPropertyCollection](graphPropertyCollection.ts)
-* [GraphObject](graphObject.ts)
-* [Graph](graph.ts)
+* [DataType](dataType.md#datatype)
+* [GraphPropertyIdLike](#graphpropertyidlike)
+* [GraphMetadataContainer](graphMetadataContainer.md#graphmetadatacontainer)
+* [GraphPropertyCollection](graphPropertyCollection.ts#graphpropertycollection)
+* [GraphObject](graphObject.ts#graphobject)
+* [Graph](graph.ts#graph)
+* [API Documentation](index.md)
+
+# GraphPropertyIdLike
+```ts
+/**
+ * Represents a valid value for the id of a GraphProperty.
+ */
+export declare type GraphPropertyIdLike = string | symbol;
+```
+
+### See Also
+* [GraphProperty](#graphproperty)
 * [API Documentation](index.md)

@@ -35,6 +35,9 @@ export class GraphCategory extends GraphMetadataContainer {
         return new GraphCategory(id, metadataFactory);
     }
 
+    /**
+     * For internal use only. Instances should be created via `GraphSchema.categories.getOrCreate()`.
+     */
     private constructor(id: GraphCategoryIdLike, metadataFactory?: () => GraphMetadata) {
         super(metadataFactory);
         this._id = id;

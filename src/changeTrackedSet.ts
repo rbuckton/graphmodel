@@ -45,7 +45,7 @@ export class ChangeTrackedSet<T> implements ChangeTrackedObject<SetChangeTracker
         if (!this.has(value)) {
             Disposable.use(new GraphTransactionScope(), scope => {
                 GraphTransactionScope._getOrCreateChangeTracker(this).add(value);
-                scope.complete();
+                scope.setComplete();
             });
         }
         return this;
@@ -55,7 +55,7 @@ export class ChangeTrackedSet<T> implements ChangeTrackedObject<SetChangeTracker
         if (this.has(value)) {
             return Disposable.use(new GraphTransactionScope(), scope => {
                 GraphTransactionScope._getOrCreateChangeTracker(this).delete(value);
-                scope.complete();
+                scope.setComplete();
                 return true;
             });
         }
@@ -68,7 +68,7 @@ export class ChangeTrackedSet<T> implements ChangeTrackedObject<SetChangeTracker
             for (const value of [...this]) {
                 changeTracker.delete(value);
             }
-            scope.complete();
+            scope.setComplete();
         });
     }
 

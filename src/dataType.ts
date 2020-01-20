@@ -27,17 +27,53 @@ import * as validators from "./validators";
 export type DataTypeNameLike = string | symbol;
 
 export class DataType<T = any> {
+    /**
+     * The default DataType representing the `string` type.
+     */
     static readonly string = new DataType<string>("string", /*packageQualifier*/ undefined, validators.isString);
+    /**
+     * The default DataType representing the `symbol` type.
+     */
     static readonly symbol = new DataType<symbol>("symbol", /*packageQualifier*/ undefined, validators.isSymbol);
+    /**
+     * The default DataType representing the `number` type.
+     */
     static readonly number = new DataType<number>("number", /*packageQualifier*/ undefined, validators.isNumber);
+    /**
+     * The default DataType representing the `bigint` type.
+     */
     static readonly bigint = new DataType<bigint>("bigint", /*packageQualifier*/ undefined, validators.isBigInt);
+    /**
+     * The default DataType representing the `boolean` type.
+     */
     static readonly boolean = new DataType<boolean>("boolean", /*packageQualifier*/ undefined, validators.isBoolean);
+    /**
+     * The default DataType representing the `object` type.
+     */
     static readonly object = new DataType<object>("object", /*packageQualifier*/ undefined, validators.isObject);
+    /**
+     * The default DataType representing the `function` type.
+     */
     static readonly function = new DataType<Function>("function", /*packageQualifier*/ undefined, validators.isFunction);
+    /**
+     * The default DataType representing the `null` type.
+     */
     static readonly null = new DataType<null>("null", /*packageQualifier*/ undefined, validators.isUndefined);
+    /**
+     * The default DataType representing the `undefined` type.
+     */
     static readonly undefined = new DataType<undefined>("undefined", /*packageQualifier*/ undefined, validators.isNull);
+    /**
+     * The default DataType representing the TypeScript `unknown` type.
+     */
     static readonly unknown = new DataType<unknown>("unknown", /*packageQualifier*/ undefined, validators.isUnknown);
+    /**
+     * The default DataType representing the TypeScript `never` type.
+     */
     static readonly never = new DataType<never>("never", /*packageQualifier*/ undefined, validators.isNever);
+    /**
+     * The default DataType representing the TypeScript `any` type.
+     */
     static readonly any = new DataType<any>("any", /*packageQualifier*/ undefined, validators.isAny);
 
     private _name: DataTypeNameLike;
@@ -48,6 +84,9 @@ export class DataType<T = any> {
         return new DataType<T>(name, packageQualifier, validator);
     }
 
+    /**
+     * For internal use only. Instances should be created via `GraphSchema.dataTypes.getOrCreate()`.
+     */
     private constructor(name: DataTypeNameLike, packageQualifier: string | undefined, validator: ((value: any) => value is T) | ((value: any) => boolean) | undefined) {
         this._name = name;
         this._validator = validator;

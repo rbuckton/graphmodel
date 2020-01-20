@@ -1,3 +1,8 @@
+<details>
+<summary>In This Article</summary>
+<li><a href="#graphmetadatacontainer">GraphMetadataContainer</a></li>
+</details>
+
 # GraphMetadataContainer
 ```ts
 /**
@@ -17,7 +22,7 @@ export declare abstract class GraphMetadataContainer<V = any> {
 ```
 
 ### See Also
-* [GraphMetadata](graphMetadata.md)
-* [GraphCategory](graphCategory.md)
-* [GraphProperty](graphProperty.md)
+* [GraphMetadata](graphMetadata.md#graphmetadata)
+* [GraphCategory](graphCategory.md#graphcategory)
+* [GraphProperty](graphProperty.md#graphproperty)
 * [API Documentation](index.md)

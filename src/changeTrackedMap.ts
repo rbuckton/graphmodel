@@ -69,7 +69,7 @@ export class ChangeTrackedMap<K, V> implements ChangeTrackedObject<MapChangeTrac
         Disposable.use(new GraphTransactionScope(), scope => {
             GraphTransactionScope._getOrCreateChangeTracker(this).set(key, value);
             this._invalidateCaches();
-            scope.complete();
+            scope.setComplete();
         });
         return this;
     }
@@ -79,7 +79,7 @@ export class ChangeTrackedMap<K, V> implements ChangeTrackedObject<MapChangeTrac
             return Disposable.use(new GraphTransactionScope(), scope => {
                 GraphTransactionScope._getOrCreateChangeTracker(this).delete(key, value);
                 this._invalidateCaches();
-                scope.complete();
+                scope.setComplete();
                 return true;
             });
         }
@@ -93,7 +93,7 @@ export class ChangeTrackedMap<K, V> implements ChangeTrackedObject<MapChangeTrac
                 changeTracker.delete(key, value);
             }
             this._invalidateCaches();
-            scope.complete();
+            scope.setComplete();
         });
     }
 

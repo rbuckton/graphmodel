@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { GraphCategory } from "./graphCategory";
+import { GraphCategory, GraphCategoryIdLike } from "./graphCategory";
 import { GraphProperty, GraphPropertyIdLike } from "./graphProperty";
 import { GraphNode, GraphNodeIdLike } from "./graphNode";
 import { Graph } from "./graph";
@@ -22,13 +22,14 @@ import { hasCategoryInSetExact, getCategorySet, emptyIterable } from "./utils";
 import { isGraphNodeIdLike } from "./validators";
 import { BaseCollection } from "./baseCollection";
 import { ChangeTrackedMap } from "./changeTrackedMap";
+/* @internal */
 import { ChangedTrackedParent, ChangeTracker } from "./graphTransactionScope";
 import { EventEmitter, EventSubscription } from "./events";
 
 /**
  * A collection of nodes within a Graph.
  */
-export class GraphNodeCollection extends BaseCollection<GraphNode> implements ChangedTrackedParent {
+export class GraphNodeCollection extends BaseCollection<GraphNode> {
     private _graph: Graph;
     private _nodes: ChangeTrackedMap<GraphNodeIdLike, GraphNode> | undefined;
     private _events?: EventEmitter<GraphNodeCollectionEvents>;
@@ -238,7 +239,7 @@ export class GraphNodeCollection extends BaseCollection<GraphNode> implements Ch
     /**
      * Creates an iterator for each node with any of the specified categories.
      */
-    public * byCategory(...categories: GraphCategory[]): IterableIterator<GraphNode> {
+    public * byCategory(...categories: (GraphCategoryIdLike | GraphCategory)[]): IterableIterator<GraphNode> {
         const set = getCategorySet(categories);
         for (const node of this.values()) {
             if (hasCategoryInSetExact(node, set)) {
@@ -247,9 +248,11 @@ export class GraphNodeCollection extends BaseCollection<GraphNode> implements Ch
         }
     }
 
+    /* @internal */
     [ChangedTrackedParent.committed](changeTracker: ChangeTracker): void {
     }
 
+    /* @internal */
     [ChangedTrackedParent.rolledBack](changeTracker: ChangeTracker): void {
         for (const [, value] of changeTracker.addedItems()) {
             const node = value as GraphNode;
@@ -276,6 +279,9 @@ export class GraphNodeCollection extends BaseCollection<GraphNode> implements Ch
         this._events?.emit("onDeleted", node);
     }
 }
+
+/* @internal */
+export interface GraphNodeCollection extends ChangedTrackedParent {}
 
 export interface GraphNodeCollectionEvents {
     /**

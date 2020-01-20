@@ -1,3 +1,11 @@
+<details>
+<summary>In This Article</summary>
+<li><a href="#graph">Graph</a></li>
+<ul style="margin:0">
+    <li><a href="#examples">Examples</a></li>
+</ul>
+</details>
+
 # Graph
 ```ts
 /**
@@ -8,19 +16,19 @@ export declare class Graph extends GraphObject {
     /**
      * Gets the graph that this object belongs to.
      */
-    readonly owner: this;
+    get owner(): Graph;
     /**
      * Gets the document schema for this object.
      */
-    readonly schema: GraphSchema;
+    get schema(): GraphSchema;
     /**
      * Gets the collection of links in the graph.
      */
-    readonly links: GraphLinkCollection;
+    get links(): GraphLinkCollection;
     /**
      * Gets the collection of nodes in the graph.
      */
-    readonly nodes: GraphNodeCollection;
+    get nodes(): GraphNodeCollection;
     /**
      * Adds a new schema to the graph.
      */
@@ -52,8 +60,17 @@ export declare class Graph extends GraphObject {
      * @param nodeId The id of the node to rename.
      * @param newId The new id for the node.
      */
-    renameNode(nodeId: string, newId: string): GraphNode | undefined;
+    renameNode(nodeId: GraphNodeIdLike, newId: GraphNodeIdLike): GraphNode | undefined;
 }
+```
+
+### Examples
+```ts
+import { Graph } from "graphmodel";
+const graph = new Graph();
+const nodeA = graph.nodes.getOrCreate("nodeA");
+const nodeB = graph.nodes.getOrCreate("nodeB");
+const linkAToB = graph.links.getOrCreate(nodeA, nodeB);
 ```
 
 ### See Also

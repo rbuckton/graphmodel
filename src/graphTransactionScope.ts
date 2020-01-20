@@ -13,9 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 import { Disposable } from "@esfx/disposable";
 
+/**
+ * Indicates a scope for transactional changes to a `Graph`.
+ */
 export class GraphTransactionScope implements Disposable {
     private static _current?: GraphTransactionScope;
     private static _enlistment?: GraphEnlistment;
@@ -24,6 +26,10 @@ export class GraphTransactionScope implements Disposable {
     private _aborted = false;
     private _disposed = false;
 
+    /**
+     * Starts a new graph transaction scope, which allows you to
+     * conditionally commit or roll-back changes to a `Graph`.
+     */
     constructor() {
         // save the current scope as the parent of this scope
         this._parent = GraphTransactionScope._current;
@@ -31,7 +37,11 @@ export class GraphTransactionScope implements Disposable {
         GraphTransactionScope._current = this;
     }
 
-    complete(): void {
+    /**
+     * Marks the scope as successfully completed. When the scope
+     * is disposed, changes will be committed.
+     */
+    setComplete(): void {
         if (this._disposed) {
             throw new ReferenceError();
         }
@@ -44,6 +54,11 @@ export class GraphTransactionScope implements Disposable {
         this._completed = true;
     }
 
+    /**
+     * Disposes of the scope and indicates changes should be committed
+     * (if `setComplete()` was called), or rolled back (if `setComplete` was not
+     * called).
+     */
     dispose(): void {
         if (this._disposed) {
             return;
@@ -79,6 +94,13 @@ export class GraphTransactionScope implements Disposable {
         }
     }
 
+    /**
+     * Disposes of the scope and indicates changes should be committed
+     * (if `setComplete()` was called), or rolled back (if `setComplete()` was
+     * not called).
+     *
+     * NOTE: This is an alias for `dispose()`.
+     */
     [Disposable.dispose](): void {
         this.dispose();
     }
@@ -94,7 +116,7 @@ export class GraphTransactionScope implements Disposable {
     /* @internal */ static _getChangeTracker<TChangeTracker extends ChangeTracker>(changeTracked: ChangeTrackedObject<TChangeTracker>): TChangeTracker | undefined {
         return this._getEnlistment()?.getChangeTracker(changeTracked);
     }
-    
+
     /* @internal */ static _getOrCreateChangeTracker<TChangeTracker extends ChangeTracker>(changeTracked: ChangeTrackedObject<TChangeTracker>): TChangeTracker {
         return this._getOrCreateEnlistment().getOrCreateChangeTracker(changeTracked);
     }
