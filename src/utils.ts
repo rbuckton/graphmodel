@@ -1,5 +1,5 @@
 /*!
- * Copyright 2017 Ron Buckton
+ * Copyright 2020 Ron Buckton
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -87,3 +87,38 @@ export class DataTypeKey {
             this.fromDataType(type);
     }
 }
+
+let nextSymbolId = 0;
+const symbolIds = new Map<symbol, number>();
+
+const TAG_SYMBOL = "@";
+const TAG_SYMBOLFOR = "%";
+const TAG_STRING = "S";
+
+/* @internal */
+export function getTaggedId(id: string | symbol) {
+    if (typeof id === "string") {
+        return `${TAG_STRING},${id}`;
+    }
+    if (Symbol.keyFor(id) !== undefined) {
+        return `${TAG_SYMBOLFOR},${id.toString()}`;
+    }
+    let symbolId = symbolIds.get(id);
+    if (symbolId === undefined) {
+        symbolId = nextSymbolId++;
+        symbolIds.set(id, symbolId);
+    }
+    return `${TAG_SYMBOL},${symbolId},${id.toString()}`;
+}
+
+const done: IteratorResult<any> = { done: true, value: undefined };
+Object.freeze(done);
+
+/* @internal */
+export const emptyIterable: IterableIterator<any> = {
+    next() { return done; },
+    [Symbol.iterator](): IterableIterator<any> {
+        return emptyIterable;
+    }
+};
+Object.freeze(emptyIterable);

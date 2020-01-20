@@ -1,5 +1,5 @@
 /*!
- * Copyright 2017 Ron Buckton
+ * Copyright 2020 Ron Buckton
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,17 +18,20 @@ import { GraphCategory } from "./graphCategory";
 import { GraphProperty, GraphPropertyIdLike } from "./graphProperty";
 import { GraphNode, GraphNodeIdLike } from "./graphNode";
 import { Graph } from "./graph";
-import { hasCategoryInSetExact, getCategorySet } from "./utils";
+import { hasCategoryInSetExact, getCategorySet, emptyIterable } from "./utils";
 import { isGraphNodeIdLike } from "./validators";
 import { BaseCollection } from "./baseCollection";
+import { ChangeTrackedMap } from "./changeTrackedMap";
+import { ChangedTrackedParent, ChangeTracker } from "./graphTransactionScope";
+import { EventEmitter, EventSubscription } from "./events";
 
 /**
  * A collection of nodes within a Graph.
  */
-export class GraphNodeCollection extends BaseCollection<GraphNode> {
+export class GraphNodeCollection extends BaseCollection<GraphNode> implements ChangedTrackedParent {
     private _graph: Graph;
-    private _nodes: Map<GraphNodeIdLike, GraphNode> | undefined;
-    private _observers: Map<GraphNodeCollectionSubscription, GraphNodeCollectionEvents> | undefined;
+    private _nodes: ChangeTrackedMap<GraphNodeIdLike, GraphNode> | undefined;
+    private _events?: EventEmitter<GraphNodeCollectionEvents>;
 
     /* @internal */ static _create(graph: Graph) {
         return new GraphNodeCollection(graph);
@@ -56,11 +59,9 @@ export class GraphNodeCollection extends BaseCollection<GraphNode> {
     /**
      * Creates a subscription for a set of named events.
      */
-    public subscribe(events: GraphNodeCollectionEvents): GraphNodeCollectionSubscription {
-        const observers = this._observers ?? (this._observers = new Map<GraphNodeCollectionSubscription, GraphNodeCollectionEvents>());
-        const subscription: GraphNodeCollectionSubscription = { unsubscribe: () => { observers.delete(subscription); } };
-        this._observers.set(subscription, { ...events });
-        return subscription;
+    public subscribe(events: GraphNodeCollectionEvents): EventSubscription {
+        const emitter = this._events ?? (this._events = new EventEmitter());
+        return emitter.subscribe(events);
     }
 
     /**
@@ -107,7 +108,7 @@ export class GraphNodeCollection extends BaseCollection<GraphNode> {
         }
         else if (this.graph.importNode(node) === node) {
             if (this._nodes === undefined) {
-                this._nodes = new Map<string, GraphNode>();
+                this._nodes = new ChangeTrackedMap<string, GraphNode>(this);
             }
             this._nodes.set(node.id, node);
             if (node.linkCount) {
@@ -136,7 +137,7 @@ export class GraphNodeCollection extends BaseCollection<GraphNode> {
             const nodeId = isGraphNodeIdLike(node) ? node : node.id;
             const ownNode = this._nodes.get(nodeId);
             if (ownNode !== undefined) {
-                this._nodes.delete(nodeId);
+                this._nodes.delete(nodeId, ownNode);
                 if (ownNode.linkCount) {
                     for (const link of ownNode.links()) {
                         this.graph.links.delete(link);
@@ -193,28 +194,22 @@ export class GraphNodeCollection extends BaseCollection<GraphNode> {
     /**
      * Creates an iterator for the node ids in the collection.
      */
-    public * keys(): IterableIterator<GraphNodeIdLike> {
-        if (this._nodes !== undefined) {
-            yield* this._nodes.keys();
-        }
+    public keys(): IterableIterator<GraphNodeIdLike> {
+        return this._nodes?.keys() ?? emptyIterable;
     }
 
     /**
      * Creates an iterator for the values in the collection.
      */
-    public * values(): IterableIterator<GraphNode> {
-        if (this._nodes !== undefined) {
-            yield* this._nodes.values();
-        }
+    public values(): IterableIterator<GraphNode> {
+        return this._nodes?.values() ?? emptyIterable;
     }
 
     /**
      * Creates an iterator for the values in the collection.
      */
-    public * entries(): IterableIterator<[GraphNodeIdLike, GraphNode]> {
-        if (this._nodes !== undefined) {
-            yield* this._nodes.entries();
-        }
+    public entries(): IterableIterator<[GraphNodeIdLike, GraphNode]> {
+        return this._nodes?.entries() ?? emptyIterable;
     }
 
     /**
@@ -252,20 +247,33 @@ export class GraphNodeCollection extends BaseCollection<GraphNode> {
         }
     }
 
-    private _raiseOnAdded(node: GraphNode) {
-        if (this._observers !== undefined) {
-            for (const { onAdded } of this._observers.values()) {
-                onAdded?.(node);
+    [ChangedTrackedParent.committed](changeTracker: ChangeTracker): void {
+    }
+
+    [ChangedTrackedParent.rolledBack](changeTracker: ChangeTracker): void {
+        for (const [, value] of changeTracker.addedItems()) {
+            const node = value as GraphNode;
+            node.deleteLinks();
+            this._raiseOnDeleted(value);
+        }
+        for (const [, value] of changeTracker.deletedItems()) {
+            const node = value as GraphNode;
+            for (const link of node.incomingLinks()) {
+                this._graph.links.add(link);
             }
+            for (const link of node.outgoingLinks()) {
+                this._graph.links.delete(link);
+            }
+            this._raiseOnAdded(node);
         }
     }
 
+    private _raiseOnAdded(node: GraphNode) {
+        this._events?.emit("onAdded", node);
+    }
+
     private _raiseOnDeleted(node: GraphNode) {
-        if (this._observers !== undefined) {
-            for (const { onDeleted } of this._observers.values()) {
-                onDeleted?.(node);
-            }
-        }
+        this._events?.emit("onDeleted", node);
     }
 }
 
@@ -279,11 +287,4 @@ export interface GraphNodeCollectionEvents {
      * An event raised when a node is removed from the collection.
      */
     onDeleted?: (node: GraphNode) => void;
-}
-
-export interface GraphNodeCollectionSubscription {
-    /**
-     * Stops listening to a set of subscribed events.
-     */
-    unsubscribe(): void;
 }

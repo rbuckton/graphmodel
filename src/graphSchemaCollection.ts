@@ -1,5 +1,5 @@
 /*!
- * Copyright 2017 Ron Buckton
+ * Copyright 2020 Ron Buckton
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 import { GraphSchema, GraphSchemaNameLike } from "./graphSchema";
 import { isGraphSchemaNameLike } from "./validators";
 import { BaseCollection } from "./baseCollection";
+import { EventEmitter, EventSubscription } from "./events";
 
 /**
  * A collection of child schemas in a schema.
@@ -24,7 +25,7 @@ import { BaseCollection } from "./baseCollection";
 export class GraphSchemaCollection extends BaseCollection<GraphSchema> {
     private _schema: GraphSchema;
     private _schemas: Map<GraphSchemaNameLike, GraphSchema> | undefined;
-    private _observers: Map<GraphSchemaCollectionSubscription, GraphSchemaCollectionEvents> | undefined;
+    private _events?: EventEmitter<GraphSchemaCollectionEvents>;
 
     /* @internal */ static _create(schema: GraphSchema) {
         return new GraphSchemaCollection(schema);
@@ -52,11 +53,9 @@ export class GraphSchemaCollection extends BaseCollection<GraphSchema> {
     /**
      * Creates a subscription for a set of named events.
      */
-    public subscribe(events: GraphSchemaCollectionEvents): GraphSchemaCollectionSubscription {
-        const observers = this._observers ?? (this._observers = new Map<GraphSchemaCollectionSubscription, GraphSchemaCollectionEvents>());
-        const subscription: GraphSchemaCollectionSubscription = { unsubscribe: () => { observers.delete(subscription); } };
-        this._observers.set(subscription, { ...events });
-        return subscription;
+    public subscribe(events: GraphSchemaCollectionEvents): EventSubscription {
+        const emitter = this._events ?? (this._events = new EventEmitter());
+        return emitter.subscribe(events);
     }
 
     /**
@@ -129,11 +128,7 @@ export class GraphSchemaCollection extends BaseCollection<GraphSchema> {
 
     private _raiseOnAdded(schema: GraphSchema) {
         this._schema._raiseOnChanged();
-        if (this._observers !== undefined) {
-            for (const { onAdded } of this._observers.values()) {
-                onAdded?.(schema);
-            }
-        }
+        this._events?.emit("onAdded", schema);
     }
 }
 
@@ -142,11 +137,4 @@ export interface GraphSchemaCollectionEvents {
      * An event raised when a schema is added to the collection.
      */
     onAdded?: (schema: GraphSchema) => void;
-}
-
-export interface GraphSchemaCollectionSubscription {
-    /**
-     * Stops listening to a set of subscribed events.
-     */
-    unsubscribe(): void;
 }

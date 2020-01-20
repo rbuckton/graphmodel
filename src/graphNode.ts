@@ -1,5 +1,5 @@
 /*!
- * Copyright 2017 Ron Buckton
+ * Copyright 2020 Ron Buckton
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import { GraphLink } from "./graphLink";
 import { Graph } from "./graph";
 import { hasCategoryInSetExact, getCategorySet } from "./utils";
 import { isGraphNodeIdLike } from "./validators";
+import { ChangeTrackedSet } from "./changeTrackedSet";
 
 /**
  * Represents a valid value for the id of a GraphNode.
@@ -33,8 +34,8 @@ export type GraphNodeIdLike = string | symbol;
  */
 export class GraphNode extends GraphObject {
     private _id: GraphNodeIdLike;
-    private _incomingLinks: Set<GraphLink> | undefined;
-    private _outgoingLinks: Set<GraphLink> | undefined;
+    private _incomingLinks: ChangeTrackedSet<GraphLink> | undefined;
+    private _outgoingLinks: ChangeTrackedSet<GraphLink> | undefined;
 
     /* @internal */ static _create(owner: Graph, id: GraphNodeIdLike, category?: GraphCategory) {
         return new GraphNode(owner, id, category);
@@ -515,14 +516,14 @@ export class GraphNode extends GraphObject {
     /* @internal */ _addLink(link: GraphLink) {
         if (link.target === this) {
             if (this._incomingLinks === undefined) {
-                this._incomingLinks = new Set<GraphLink>();
+                this._incomingLinks = new ChangeTrackedSet<GraphLink>(this);
             }
             this._incomingLinks.add(link);
         }
 
         if (link.source === this) {
             if (this._outgoingLinks === undefined) {
-                this._outgoingLinks = new Set<GraphLink>();
+                this._outgoingLinks = new ChangeTrackedSet<GraphLink>(this);
             }
             this._outgoingLinks.add(link);
         }

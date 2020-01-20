@@ -1,5 +1,5 @@
 /*!
- * Copyright 2017 Ron Buckton
+ * Copyright 2020 Ron Buckton
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import { isGraphPropertyIdLike } from "./validators";
 import { BaseCollection } from "./baseCollection";
 import { TypeOfDataTypeName, DataTypeNameLike, DataType } from "./dataType";
 import { isDataTypeNameLike } from "./utils";
+import { EventEmitter, EventSubscription } from "./events";
 
 /**
  * A collection of graph properties in a schema.
@@ -28,7 +29,7 @@ import { isDataTypeNameLike } from "./utils";
 export class GraphPropertyCollection extends BaseCollection<GraphProperty> {
     private _schema: GraphSchema;
     private _properties: Map<GraphPropertyIdLike, GraphProperty> | undefined;
-    private _observers: Map<GraphPropertyCollectionSubscription, GraphPropertyCollectionEvents> | undefined;
+    private _events?: EventEmitter<GraphPropertyCollectionEvents>;
 
     /* @internal */ static _create(schema: GraphSchema) {
         return new GraphPropertyCollection(schema);
@@ -56,11 +57,9 @@ export class GraphPropertyCollection extends BaseCollection<GraphProperty> {
     /**
      * Creates a subscription for a set of named events.
      */
-    public subscribe(events: GraphPropertyCollectionEvents): GraphPropertyCollectionSubscription {
-        const observers = this._observers ?? (this._observers = new Map<GraphPropertyCollectionSubscription, GraphPropertyCollectionEvents>());
-        const subscription: GraphPropertyCollectionSubscription = { unsubscribe: () => { observers.delete(subscription); } };
-        this._observers.set(subscription, { ...events });
-        return subscription;
+    public subscribe(events: GraphPropertyCollectionEvents): EventSubscription {
+        const emitter = this._events ?? (this._events = new EventEmitter());
+        return emitter.subscribe(events);
     }
 
     /**
@@ -224,20 +223,12 @@ export class GraphPropertyCollection extends BaseCollection<GraphProperty> {
 
     private _raiseOnAdded(property: GraphProperty) {
         this._schema._raiseOnChanged();
-        if (this._observers !== undefined) {
-            for (const { onAdded } of this._observers.values()) {
-                onAdded?.(property);
-            }
-        }
+        this._events?.emit("onAdded", property);
     }
-
+    
     private _raiseOnDeleted(property: GraphProperty) {
         this._schema._raiseOnChanged();
-        if (this._observers !== undefined) {
-            for (const { onDeleted } of this._observers.values()) {
-                onDeleted?.(property);
-            }
-        }
+        this._events?.emit("onDeleted", property);
     }
 }
 
@@ -251,11 +242,4 @@ export interface GraphPropertyCollectionEvents {
      * An event raised when a property is removed from the collection.
      */
     onDeleted?: (category: GraphProperty) => void;
-}
-
-export interface GraphPropertyCollectionSubscription {
-    /**
-     * Stops listening to a set of subscribed events.
-     */
-    unsubscribe(): void;
 }

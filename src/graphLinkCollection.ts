@@ -1,5 +1,5 @@
 /*!
- * Copyright 2017 Ron Buckton
+ * Copyright 2020 Ron Buckton
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,9 +19,11 @@ import { GraphProperty, GraphPropertyIdLike } from "./graphProperty";
 import { GraphLink } from "./graphLink";
 import { GraphNode, GraphNodeIdLike } from "./graphNode";
 import { Graph } from "./graph";
-import { hasCategoryInSetExact, getCategorySet } from "./utils";
+import { hasCategoryInSetExact, getCategorySet, getTaggedId, emptyIterable } from "./utils";
 import { isGraphNodeIdLike } from "./validators";
 import { BaseCollection } from "./baseCollection";
+import { ChangeTrackedMap } from "./changeTrackedMap";
+import { EventEmitter, EventSubscription } from "./events";
 
 /**
  * A collection of links within a Graph.
@@ -29,8 +31,8 @@ import { BaseCollection } from "./baseCollection";
 export class GraphLinkCollection extends BaseCollection<GraphLink> {
     private _size = 0;
     private _graph: Graph;
-    private _links: Map<GraphNodeIdLike, Map<GraphNodeIdLike, Map<number, GraphLink>>> | undefined;
-    private _observers: Map<GraphLinkCollectionSubscription, GraphLinkCollectionEvents> | undefined;
+    private _links: ChangeTrackedMap<string, GraphLink> | undefined;
+    private _events?: EventEmitter<GraphLinkCollectionEvents>;
 
     /*@internal*/
     public static _create(graph: Graph) {
@@ -59,11 +61,9 @@ export class GraphLinkCollection extends BaseCollection<GraphLink> {
     /**
      * Creates a subscription for a set of named events.
      */
-    public subscribe(events: GraphLinkCollectionEvents): GraphLinkCollectionSubscription {
-        const observers = this._observers ?? (this._observers = new Map<GraphLinkCollectionSubscription, GraphLinkCollectionEvents>());
-        const subscription: GraphLinkCollectionSubscription = { unsubscribe: () => { observers.delete(subscription); } };
-        this._observers.set(subscription, { ...events });
-        return subscription;
+    public subscribe(events: GraphLinkCollectionEvents): EventSubscription {
+        const emitter = this._events ?? (this._events = new EventEmitter());
+        return emitter.subscribe(events);
     }
 
     /**
@@ -79,7 +79,7 @@ export class GraphLinkCollection extends BaseCollection<GraphLink> {
     public get(source: GraphNode | GraphNodeIdLike, target: GraphNode | GraphNodeIdLike, index: number = 0): GraphLink | undefined {
         const sourceId = isGraphNodeIdLike(source) ? source : source.id;
         const targetId = isGraphNodeIdLike(target) ? target : target.id;
-        return this._links?.get(sourceId)?.get(targetId)?.get(index);
+        return this._links?.get(linkId(sourceId, targetId, index));
     }
 
     /**
@@ -116,20 +116,10 @@ export class GraphLinkCollection extends BaseCollection<GraphLink> {
         const targetId = link.target.id;
         const index = link.index;
         if (this._links === undefined) {
-            this._links = new Map();
+            this._links = new ChangeTrackedMap(this);
         }
 
-        let targetMap = this._links.get(sourceId);
-        if (targetMap === undefined) {
-            this._links.set(sourceId, targetMap = new Map());
-        }
-
-        let indexMap = targetMap.get(targetId);
-        if (indexMap === undefined) {
-            targetMap.set(targetId, indexMap = new Map());
-        }
-
-        const ownLink = indexMap.get(index);
+        const ownLink = this._links.get(linkId(sourceId, targetId, index));
         if (ownLink !== undefined) {
             if (ownLink !== link) {
                 ownLink._mergeFrom(link);
@@ -137,7 +127,7 @@ export class GraphLinkCollection extends BaseCollection<GraphLink> {
         }
         else if (this.graph.importLink(link) === link) {
             this._size++;
-            indexMap.set(index, link);
+            this._links.set(linkId(sourceId, targetId, index), link);
             link.source._addLink(link);
             link.target._addLink(link);
             this.graph.nodes.add(link.source);
@@ -170,35 +160,23 @@ export class GraphLinkCollection extends BaseCollection<GraphLink> {
                 index = linkOrSourceId.index;
             }
 
-            const targetMap = this._links.get(sourceId);
-            if (targetMap !== undefined) {
-                const indexMap = targetMap.get(targetId);
-                if (indexMap !== undefined) {
-                    const ownLink = indexMap.get(index);
-                    if (ownLink !== undefined) {
-                        let remove: boolean;
-                        if (category !== undefined) {
-                            ownLink.deleteCategory(category);
-                            remove = ownLink.categoryCount === 0;
-                        }
-                        else {
-                            remove = true;
-                        }
-                        if (remove) {
-                            indexMap.delete(index);
-                            if (indexMap.size === 0) {
-                                targetMap.delete(targetId);
-                                if (targetMap.size === 0) {
-                                    this._links.delete(sourceId);
-                                }
-                            }
-                            this._size--;
-                            ownLink.source._removeLink(ownLink);
-                            ownLink.target._removeLink(ownLink);
-                            this._raiseOnDeleted(ownLink);
-                            return isGraphNodeIdLike(linkOrSourceId) ? ownLink : true;
-                        }
-                    }
+            const ownLink = this._links.get(linkId(sourceId, targetId, index));
+            if (ownLink !== undefined) {
+                let remove: boolean;
+                if (category !== undefined) {
+                    ownLink.deleteCategory(category);
+                    remove = ownLink.categoryCount === 0;
+                }
+                else {
+                    remove = true;
+                }
+                if (remove) {
+                    this._links.delete(linkId(sourceId, targetId, index), ownLink);
+                    this._size--;
+                    ownLink.source._removeLink(ownLink);
+                    ownLink.target._removeLink(ownLink);
+                    this._raiseOnDeleted(ownLink);
+                    return isGraphNodeIdLike(linkOrSourceId) ? ownLink : true;
                 }
             }
         }
@@ -223,14 +201,8 @@ export class GraphLinkCollection extends BaseCollection<GraphLink> {
     /**
      * Creates an iterator for the values in the collection.
      */
-    public * values(): IterableIterator<GraphLink> {
-        if (this._links !== undefined) {
-            for (const targetMap of this._links.values()) {
-                for (const indexMap of targetMap.values()) {
-                    yield* indexMap.values();
-                }
-            }
-        }
+    public values(): IterableIterator<GraphLink> {
+        return this._links?.values() ?? emptyIterable;
     }
 
     /**
@@ -321,19 +293,11 @@ export class GraphLinkCollection extends BaseCollection<GraphLink> {
     }
 
     private _raiseOnAdded(link: GraphLink) {
-        if (this._observers !== undefined) {
-            for (const { onAdded } of this._observers.values()) {
-                onAdded?.(link);
-            }
-        }
+        this._events?.emit("onAdded", link);
     }
 
     private _raiseOnDeleted(link: GraphLink) {
-        if (this._observers !== undefined) {
-            for (const { onDeleted } of this._observers.values()) {
-                onDeleted?.(link);
-            }
-        }
+        this._events?.emit("onDeleted", link);
     }
 }
 
@@ -349,13 +313,6 @@ export interface GraphLinkCollectionEvents {
     onDeleted?: (this: void, link: GraphLink) => void;
 }
 
-export interface GraphLinkCollectionSubscription {
-    /**
-     * Stops listening to a set of subscribed events.
-     */
-    unsubscribe(): void;
-}
-
-function linkId(sourceId: string, targetId: string, index: number) {
-    return `#(sourceId=${sourceId}) (targetId=${targetId}) (index=${index})`;
+function linkId(sourceId: GraphNodeIdLike, targetId: GraphNodeIdLike, index: number) {
+    return `#(sourceId=${getTaggedId(sourceId)}) (targetId=${getTaggedId(targetId)}) (index=${index})`;
 }

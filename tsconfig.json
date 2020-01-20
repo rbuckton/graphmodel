@@ -6,6 +6,10 @@
         "stripInternal": true,
         "declaration": true,
         "sourceMap": true,
-        "preserveConstEnums": true
-    }
+        "preserveConstEnums": true,
+        "rootDir": "./src",
+        "outDir": "./dist",
+        "types": ["jest", "jest-extended"]
+    },
+    "include": ["./src"]
 }

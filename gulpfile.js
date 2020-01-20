@@ -8,7 +8,7 @@ const project = {
     src: () => gulp.src(project.globs),
     dest: () => gulp.dest("dist"),
     globs: ["src/**/*.ts"],
-    compile: tsb.create("src/tsconfig.json")
+    compile: tsb.create("tsconfig.json")
 };
 
 gulp.task("clean", () => del("dist"));

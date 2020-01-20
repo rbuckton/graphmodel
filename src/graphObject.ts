@@ -1,5 +1,5 @@
 /*!
- * Copyright 2017 Ron Buckton
+ * Copyright 2020 Ron Buckton
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,15 +21,18 @@ import { GraphSchema } from "./graphSchema";
 import { isIterableObject, getCategorySet } from "./utils";
 import { isGraphCategoryIdLike, isGraphPropertyIdLike } from "./validators";
 import { GraphCommonSchema } from "./graphCommonSchema";
+import { ChangeTrackedSet } from "./changeTrackedSet";
+import { ChangeTrackedMap } from "./changeTrackedMap";
+import { EventEmitter, EventSubscription } from "./events";
 
 /**
  * The base definition of an extensible graph object.
  */
 export abstract class GraphObject {
     private _owner: Graph | undefined;
-    private _categories: Set<GraphCategory> | undefined;
-    private _properties: Map<GraphProperty, any> | undefined;
-    private _observers: Map<GraphObjectSubscription, GraphObjectEvents> | undefined;
+    private _categories: ChangeTrackedSet<GraphCategory> | undefined;
+    private _properties: ChangeTrackedMap<GraphProperty, any> | undefined;
+    private _events?: EventEmitter<GraphObjectEvents>;
 
     constructor(owner?: Graph, category?: GraphCategory) {
         this._owner = owner;
@@ -74,11 +77,9 @@ export abstract class GraphObject {
     /**
      * Creates a subscription for a set of named events.
      */
-    public subscribe(events: GraphObjectEvents): GraphObjectSubscription {
-        const observers = this._observers ?? (this._observers = new Map<GraphObjectSubscription, GraphObjectEvents>());
-        const subscription: GraphObjectSubscription = { unsubscribe: () => { observers.delete(subscription); } };
-        this._observers.set(subscription, { ...events });
-        return subscription;
+    public subscribe(events: GraphObjectEvents): EventSubscription {
+        const emitter = this._events ?? (this._events = new EventEmitter<GraphObjectEvents>());
+        return emitter.subscribe(events);
     }
 
     /**
@@ -176,7 +177,7 @@ export abstract class GraphObject {
      */
     public addCategory(category: GraphCategory): this {
         if (this._categories === undefined) {
-            this._categories = new Set<GraphCategory>();
+            this._categories = new ChangeTrackedSet<GraphCategory>(this);
         }
         if (!this._categories.has(category)) {
             this._categories.add(category);
@@ -278,7 +279,7 @@ export abstract class GraphObject {
         }
 
         if (this._properties === undefined) {
-            this._properties = new Map<GraphProperty, any>();
+            this._properties = new ChangeTrackedMap<GraphProperty, any>(this);
         }
 
         const ownValue = this._properties.get(propertyObj);
@@ -314,7 +315,7 @@ export abstract class GraphObject {
             return false;
         }
 
-        this._properties.delete(property);
+        this._properties.delete(property, this._properties.get(property));
         this._raiseOnPropertyChanged(property);
         return true;
     }
@@ -327,7 +328,7 @@ export abstract class GraphObject {
             return false;
         }
         if (this._categories === undefined) {
-            this._categories = new Set<GraphCategory>();
+            this._categories = new ChangeTrackedSet<GraphCategory>(this);
         }
         let changed = false;
         for (const category of other._categories) {
@@ -349,7 +350,7 @@ export abstract class GraphObject {
             return false;
         }
         if (this._properties === undefined) {
-            this._properties = new Map<GraphProperty, any>();
+            this._properties = new ChangeTrackedMap<GraphProperty, any>(this);
         }
 
         let changed = false;
@@ -436,19 +437,11 @@ export abstract class GraphObject {
     }
 
     /* @internal */ _raiseOnCategoryChanged(change: "add" | "delete", category: GraphCategory) {
-        if (this._observers !== undefined) {
-            for (const { onCategoryChanged } of this._observers.values()) {
-                onCategoryChanged?.(change, category);
-            }
-        }
+        this._events?.emit("onCategoryChanged", change, category);
     }
 
     /* @internal */ _raiseOnPropertyChanged(property: GraphProperty) {
-        if (this._observers !== undefined) {
-            for (const { onPropertyChanged } of this._observers.values()) {
-                onPropertyChanged?.(property.id);
-            }
-        }
+        this._events?.emit("onPropertyChanged", property.id);
     }
 
     private _find(property: GraphProperty) {
@@ -478,11 +471,4 @@ export interface GraphObjectEvents {
      * An event raised when a property changes on the object.
      */
     onPropertyChanged?: (name: GraphPropertyIdLike) => void;
-}
-
-export interface GraphObjectSubscription {
-    /**
-     * Stops listening to a set of subscribed events.
-     */
-    unsubscribe(): void;
 }

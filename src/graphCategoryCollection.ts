@@ -1,5 +1,5 @@
 /*!
- * Copyright 2017 Ron Buckton
+ * Copyright 2020 Ron Buckton
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import { GraphCategory, GraphCategoryIdLike } from "./graphCategory";
 import { GraphMetadata } from "./graphMetadata";
 import { isGraphCategoryIdLike } from "./validators";
 import { BaseCollection } from "./baseCollection";
+import { EventEmitter, EventSubscription } from "./events";
 
 /**
  * A collection of graph categories in a schema.
@@ -26,7 +27,7 @@ import { BaseCollection } from "./baseCollection";
 export class GraphCategoryCollection extends BaseCollection<GraphCategory> {
     private _schema: GraphSchema;
     private _categories: Map<GraphCategoryIdLike, GraphCategory> | undefined;
-    private _observers: Map<GraphCategoryCollectionSubscription, GraphCategoryCollectionEvents> | undefined;
+    private _events?: EventEmitter<GraphCategoryCollectionEvents>;
 
     /* @internal */
     public static _create(schema: GraphSchema) {
@@ -56,11 +57,9 @@ export class GraphCategoryCollection extends BaseCollection<GraphCategory> {
     /**
      * Creates a subscription for a set of named events.
      */
-    public subscribe(events: GraphCategoryCollectionEvents) {
-        const observers = this._observers ?? (this._observers = new Map<GraphCategoryCollectionSubscription, GraphCategoryCollectionEvents>());
-        const subscription: GraphCategoryCollectionSubscription = { unsubscribe: () => { observers.delete(subscription); } };
-        this._observers.set(subscription, { ...events });
-        return subscription;
+    public subscribe(events: GraphCategoryCollectionEvents): EventSubscription {
+        const emitter = this._events ?? (this._events = new EventEmitter());
+        return emitter.subscribe(events);
     }
 
     /**
@@ -177,20 +176,12 @@ export class GraphCategoryCollection extends BaseCollection<GraphCategory> {
 
     private _raiseOnAdded(category: GraphCategory) {
         this._schema._raiseOnChanged();
-        if (this._observers !== undefined) {
-            for (const { onAdded } of this._observers.values()) {
-                onAdded?.(category);
-            }
-        }
+        this._events?.emit("onAdded", category);
     }
-
+    
     private _raiseOnDeleted(category: GraphCategory) {
         this._schema._raiseOnChanged();
-        if (this._observers !== undefined) {
-            for (const { onDeleted } of this._observers.values()) {
-                onDeleted?.(category);
-            }
-        }
+        this._events?.emit("onDeleted", category);
     }
 }
 
@@ -204,11 +195,4 @@ export interface GraphCategoryCollectionEvents {
      * An event raised when a category is removed from the collection.
      */
     onDeleted?: (category: GraphCategory) => void;
-}
-
-export interface GraphCategoryCollectionSubscription {
-    /**
-     * Stops listening to a set of subscribed events.
-     */
-    unsubscribe(): void;
 }

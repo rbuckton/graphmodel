@@ -1,5 +1,5 @@
 /*!
- * Copyright 2017 Ron Buckton
+ * Copyright 2020 Ron Buckton
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import { GraphCategory, GraphCategoryIdLike } from "./graphCategory";
 import { GraphProperty, GraphPropertyIdLike } from "./graphProperty";
 import { Graph } from "./graph";
 import { isGraphSchemaNameLike } from "./validators";
+import { EventEmitter, EventSubscription } from "./events";
 
 /**
  * Represents a valid value for the name of a GraphSchema.
@@ -39,7 +40,7 @@ export class GraphSchema {
     private _dataTypes: DataTypeCollection | undefined;
     private _categories: GraphCategoryCollection | undefined;
     private _properties: GraphPropertyCollection | undefined;
-    private _observers: Map<GraphSchemaSubscription, GraphSchemaEvents> | undefined;
+    private _events?: EventEmitter<GraphSchemaEvents>;
 
     constructor(name: GraphSchemaNameLike);
     /* @internal */ constructor(name: GraphSchemaNameLike, graph: Graph);
@@ -93,11 +94,9 @@ export class GraphSchema {
     /**
      * Creates a subscription for a set of named events.
      */
-    public subscribe(events: GraphSchemaEvents): GraphSchemaSubscription {
-        const observers = this._observers ?? (this._observers = new Map<GraphSchemaSubscription, GraphSchemaEvents>());
-        const subscription: GraphSchemaSubscription = { unsubscribe: () => { observers.delete(subscription); } };
-        this._observers.set(subscription, { ...events });
-        return subscription;
+    public subscribe(events: GraphSchemaEvents): EventSubscription {
+        const emitter = this._events ?? (this._events = new EventEmitter());
+        return emitter.subscribe(events);
     }
 
     /**
@@ -205,11 +204,7 @@ export class GraphSchema {
     }
 
     /* @internal */ _raiseOnChanged() {
-        if (this._observers !== undefined) {
-            for (const { onChanged } of this._observers.values()) {
-                onChanged?.();
-            }
-        }
+        this._events?.emit("onChanged");
     }
 }
 
@@ -218,11 +213,4 @@ export interface GraphSchemaEvents {
      * An event raised when the schema or one of its child schemas has changed.
      */
     onChanged?: () => void;
-}
-
-export interface GraphSchemaSubscription {
-    /**
-     * Stops listening to a set of subscribed events.
-     */
-    unsubscribe(): void;
 }

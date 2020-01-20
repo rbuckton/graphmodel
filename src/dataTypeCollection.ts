@@ -1,5 +1,5 @@
 /*!
- * Copyright 2017 Ron Buckton
+ * Copyright 2020 Ron Buckton
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ import { GraphSchema } from "./graphSchema";
 import { BaseCollection } from "./baseCollection";
 import { DataType, DataTypeNameLike } from "./dataType";
 import { isDataTypeNameLike, DataTypeKey } from "./utils";
+import { EventEmitter, EventSubscription } from "./events";
 
 /**
  * A collection of graph properties in a schema.
@@ -26,7 +27,7 @@ export class DataTypeCollection extends BaseCollection<DataType> {
     private _schema: GraphSchema;
     private _size = 0;
     private _types: Map<string, Map<DataTypeNameLike, DataType>> | undefined;
-    private _observers: Map<DataTypeCollectionSubscription, DataTypeCollectionEvents> | undefined;
+    private _events?: EventEmitter<DataTypeCollectionEvents>;
 
     /* @internal */ static _create(schema: GraphSchema) {
         return new DataTypeCollection(schema);
@@ -54,11 +55,9 @@ export class DataTypeCollection extends BaseCollection<DataType> {
     /**
      * Creates a subscription for a set of named events.
      */
-    public subscribe(events: DataTypeCollectionEvents): DataTypeCollectionSubscription {
-        const observers = this._observers ?? (this._observers = new Map<DataTypeCollectionSubscription, DataTypeCollectionEvents>());
-        const subscription: DataTypeCollectionSubscription = { unsubscribe: () => { observers.delete(subscription); } };
-        this._observers.set(subscription, { ...events });
-        return subscription;
+    public subscribe(events: DataTypeCollectionEvents): EventSubscription {
+        const emitter = this._events ?? (this._events = new EventEmitter());
+        return emitter.subscribe(events);
     }
 
     /**
@@ -204,20 +203,12 @@ export class DataTypeCollection extends BaseCollection<DataType> {
 
     private _raiseOnAdded(dataType: DataType) {
         this._schema._raiseOnChanged();
-        if (this._observers !== undefined) {
-            for (const { onAdded } of this._observers.values()) {
-                onAdded?.(dataType);
-            }
-        }
+        this._events?.emit("onAdded", dataType);
     }
 
     private _raiseOnDeleted(dataType: DataType) {
         this._schema._raiseOnChanged();
-        if (this._observers !== undefined) {
-            for (const { onDeleted } of this._observers.values()) {
-                onDeleted?.(dataType);
-            }
-        }
+        this._events?.emit("onDeleted", dataType);
     }
 }
 
@@ -231,11 +222,4 @@ export interface DataTypeCollectionEvents {
      * An event raised when a data type is removed from the collection.
      */
     onDeleted?: (type: DataType) => void;
-}
-
-export interface DataTypeCollectionSubscription {
-    /**
-     * Stops listening to a set of subscribed events.
-     */
-    unsubscribe(): void;
 }

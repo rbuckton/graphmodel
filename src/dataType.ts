@@ -1,5 +1,5 @@
 /*!
- * Copyright 2017 Ron Buckton
+ * Copyright 2020 Ron Buckton
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -124,10 +124,16 @@ export class DataType<T = any> {
         return new DataType(names.join("|"), /*packageQualifier*/ undefined, validator);
     }
 
-    canValidate() {
+    /**
+     * Gets a value indicating whether this data type supports validation.
+     */
+    get canValidate() {
         return this._validator !== undefined;
     }
 
+    /**
+     * Validates whether a value is valid for this data type.
+     */
     validate(value: any): value is T {
         return (void 0, this._validator)?.(value) ?? true;
     }
