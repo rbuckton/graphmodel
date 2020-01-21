@@ -16,9 +16,9 @@
 
 import { GraphSchema } from "./graphSchema";
 import { BaseCollection } from "./baseCollection";
-import { DataType, DataTypeNameLike } from "./dataType";
-import { isDataTypeNameLike, DataTypeKey } from "./utils";
+import { DataType, DataTypeNameLike, DataTypeKey } from "./dataType";
 import { EventEmitter, EventSubscription } from "./events";
+import { isDataTypeNameLike } from "./utils";
 
 /**
  * A collection of graph properties in a schema.
@@ -26,7 +26,7 @@ import { EventEmitter, EventSubscription } from "./events";
 export class DataTypeCollection extends BaseCollection<DataType> {
     private _schema: GraphSchema;
     private _size = 0;
-    private _types: Map<string, Map<DataTypeNameLike, DataType>> | undefined;
+    private _types: Map<string, DataType> | undefined;
     private _events?: EventEmitter<DataTypeCollectionEvents>;
 
     /* @internal */ static _create(schema: GraphSchema) {
@@ -71,8 +71,8 @@ export class DataTypeCollection extends BaseCollection<DataType> {
     public has(type: DataTypeNameLike | DataType, packageQualifier?: string): boolean {
         const key = DataTypeKey.from(type, packageQualifier);
         return isDataTypeNameLike(type) ?
-            this._types?.get(key.packageQualifier)?.has(key.name) ?? false :
-            this._types?.get(key.packageQualifier)?.get(key.name) === type;
+            this._types?.has(key.id) ?? false :
+            this._types?.get(key.id) === type;
     }
 
     /**
@@ -80,13 +80,16 @@ export class DataTypeCollection extends BaseCollection<DataType> {
      */
     public get(name: DataTypeNameLike, packageQualifier?: string): DataType | undefined {
         const key = DataTypeKey.from(name, packageQualifier);
-        return this._types?.get(key.packageQualifier)?.get(key.name);
+        return this._types?.get(key.id);
     }
 
     /**
      * Gets the data type with the specified name. If one does not exist, a new data type is created.
      */
     public getOrCreate<V = any>(name: DataTypeNameLike, validator?: ((value: any) => value is V) | ((value: any) => boolean)): DataType<V>;
+    /**
+     * Gets the data type with the specified name. If one does not exist, a new data type is created.
+     */
     public getOrCreate<V = any>(name: DataTypeNameLike, packageQualifier?: string, validator?: ((value: any) => value is V) | ((value: any) => boolean)): DataType<V>;
     public getOrCreate(name: DataTypeNameLike, packageQualifierOrValidator?: string | ((value: any) => boolean), validator?: ((value: any) => boolean)): DataType {
         let packageQualifier: string | undefined;
@@ -97,10 +100,12 @@ export class DataTypeCollection extends BaseCollection<DataType> {
             packageQualifier = packageQualifierOrValidator;
         }
 
-        let dataType = this.get(name, packageQualifier);
+        const key = DataTypeKey.from(name, packageQualifier);
+        let dataType = this._types?.get(key.id);
         if (dataType === undefined) {
-            this.add(dataType = DataType._create(name, packageQualifier, validator));
+            this.add(dataType = DataType._create(key, validator));
         }
+
         return dataType as DataType;
     }
 
@@ -108,10 +113,11 @@ export class DataTypeCollection extends BaseCollection<DataType> {
      * Gets the data type for the provided class. If one does not exist, a new data type is created.
      */
     public getOrCreateClass<V = any>(ctor: new (...args: any) => V, packageQualifier?: string) {
-        let dataType = this.get(ctor.name, packageQualifier);
+        const key = DataTypeKey.fromClass(ctor, packageQualifier);
+        let dataType = this._types?.get(key.id);
         if (dataType === undefined) {
             const validator = (value: any) => value instanceof ctor;
-            this.add(dataType = DataType._create(ctor.name, packageQualifier, validator));
+            this.add(dataType = DataType._create(key, validator));
         }
         return dataType as DataType<V>;
     }
@@ -124,14 +130,10 @@ export class DataTypeCollection extends BaseCollection<DataType> {
             this._types = new Map();
         }
 
-        let packageTypes = this._types.get(dataType.packageQualifier);
-        if (packageTypes === undefined) {
-            this._types.set(dataType.packageQualifier, packageTypes = new Map());
-        }
-
-        const oldSize = packageTypes.size;
-        packageTypes.set(dataType.name, dataType);
-        this._size += packageTypes.size - oldSize;
+        const key = DataTypeKey.fromDataType(dataType);
+        const oldSize = this._types.size;
+        this._types.set(key.id, dataType);
+        this._size += this._types.size - oldSize;
         this._raiseOnAdded(dataType);
         return this;
     }
@@ -151,20 +153,13 @@ export class DataTypeCollection extends BaseCollection<DataType> {
     public delete(dataType: DataType | DataTypeNameLike, packageQualifier?: string): DataType | boolean {
         const key = DataTypeKey.from(dataType, packageQualifier);
         if (this._types !== undefined) {
-            const packageTypes = this._types.get(key.packageQualifier);
-            if (packageTypes !== undefined) {
-                const ownDataType = packageTypes.get(key.name);
-                if (ownDataType !== undefined) {
-                    const oldSize = packageTypes.size;
-                    packageTypes.delete(name);
-                    this._size -= oldSize - packageTypes.size;
-                    if (packageTypes.size === 0) {
-                        this._types.delete(key.packageQualifier);
-                    }
-
-                    this._raiseOnDeleted(ownDataType);
-                    return isDataTypeNameLike(dataType) ? ownDataType : true;
-                }
+            const ownDataType = this._types.get(key.id);
+            if (ownDataType !== undefined) {
+                const oldSize = this._types.size;
+                this._types.delete(name);
+                this._size -= oldSize - this._types.size;
+                this._raiseOnDeleted(ownDataType);
+                return isDataTypeNameLike(dataType) ? ownDataType : true;
             }
         }
         return false;
@@ -186,11 +181,7 @@ export class DataTypeCollection extends BaseCollection<DataType> {
      */
     public * values(): IterableIterator<DataType> {
         if (this._types !== undefined) {
-            for (const packageTypes of this._types.values()) {
-                for (const dataType of packageTypes.values()) {
-                    yield dataType;
-                }
-            }
+            yield* this._types.values();
         }
     }
 

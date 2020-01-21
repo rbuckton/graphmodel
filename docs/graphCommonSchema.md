@@ -43,6 +43,7 @@ export declare namespace GraphCommonSchema.DataTypes {
     export { _function as function };
     const _null: DataType<null>;
     export { _null as null };
+    export const primitive: DataType<string | symbol | number | bigint | boolean>;
     export const undefined: DataType<undefined>;
     export const unknown: DataType<unknown>;
     export const never: DataType<never>;

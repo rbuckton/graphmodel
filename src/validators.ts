@@ -48,21 +48,21 @@ export const isNever = (value: any): value is never => false;
 /* @internal */
 export const isAny = (value: any): value is any => true;
 /* @internal */
-export const isGraphNode = (value: any) => value instanceof GraphNode;
+export const isGraphNode = (value: any): value is GraphNode => value instanceof GraphNode;
 /* @internal */
-export const isGraphLink = (value: any) => value instanceof GraphLink;
+export const isGraphLink = (value: any): value is GraphLink => value instanceof GraphLink;
 /* @internal */
-export const isGraphProperty = (value: any) => value instanceof GraphProperty;
+export const isGraphProperty = (value: any): value is GraphProperty => value instanceof GraphProperty;
 /* @internal */
-export const isGraphCategory = (value: any) => value instanceof GraphCategory;
+export const isGraphCategory = (value: any): value is GraphCategory => value instanceof GraphCategory;
 /* @internal */
-export const isGraphObject = (value: any) => value instanceof GraphObject;
+export const isGraphObject = (value: any): value is GraphObject => value instanceof GraphObject;
 /* @internal */
-export const isGraphMetadata = (value: any) => value instanceof GraphMetadata;
+export const isGraphMetadata = (value: any): value is GraphMetadata => value instanceof GraphMetadata;
 /* @internal */
-export const isGraphSchema = (value: any) => value instanceof GraphSchema;
+export const isGraphSchema = (value: any): value is GraphSchema => value instanceof GraphSchema;
 /* @internal */
-export const isGraph = (value: any) => value instanceof Graph;
+export const isGraph = (value: any): value is Graph => value instanceof Graph;
 /* @internal */
 export const isGraphNodeIdLike = (value: any): value is GraphNodeIdLike => isSymbol(value) || isString(value);
 /* @internal */

@@ -89,32 +89,48 @@ export namespace GraphCommonSchema {
     export declare const Contains: import("./graphCategory").GraphCategory;
 }
 lazyInit(GraphCommonSchema, "Schema", () => new GraphSchema("GraphCommonSchema.Schema"));
-lazyInit(GraphCommonSchema, "DataTypes", () => ({
-    string: (GraphCommonSchema.Schema.dataTypes.add(DataType.string), DataType.string),
-    symbol: (GraphCommonSchema.Schema.dataTypes.add(DataType.symbol), DataType.symbol),
-    number: (GraphCommonSchema.Schema.dataTypes.add(DataType.number), DataType.number),
-    bigint: (GraphCommonSchema.Schema.dataTypes.add(DataType.bigint), DataType.bigint),
-    boolean: (GraphCommonSchema.Schema.dataTypes.add(DataType.boolean), DataType.boolean),
-    object: (GraphCommonSchema.Schema.dataTypes.add(DataType.object), DataType.object),
-    function: (GraphCommonSchema.Schema.dataTypes.add(DataType.function), DataType.function),
-    null: (GraphCommonSchema.Schema.dataTypes.add(DataType.null), DataType.null),
-    undefined: (GraphCommonSchema.Schema.dataTypes.add(DataType.undefined), DataType.undefined),
-    unknown: (GraphCommonSchema.Schema.dataTypes.add(DataType.unknown), DataType.unknown),
-    never: (GraphCommonSchema.Schema.dataTypes.add(DataType.never), DataType.never),
-    any: (GraphCommonSchema.Schema.dataTypes.add(DataType.any), DataType.any),
-    GraphNode: GraphCommonSchema.Schema.dataTypes.getOrCreate("graphModel!GraphNode", validators.isGraphNode),
-    GraphNodeIdLike: GraphCommonSchema.Schema.dataTypes.getOrCreate("graphModel!GraphNodeIdLike", validators.isGraphNodeIdLike),
-    GraphLink: GraphCommonSchema.Schema.dataTypes.getOrCreate("graphModel!GraphLink", validators.isGraphLink),
-    GraphProperty: GraphCommonSchema.Schema.dataTypes.getOrCreate("graphModel!GraphProperty", validators.isGraphProperty),
-    GraphPropertyIdLike: GraphCommonSchema.Schema.dataTypes.getOrCreate("graphModel!GraphPropertyIdLike", validators.isGraphPropertyIdLike),
-    GraphCategory: GraphCommonSchema.Schema.dataTypes.getOrCreate("graphModel!GraphCategory", validators.isGraphCategory),
-    GraphCategoryIdLike: GraphCommonSchema.Schema.dataTypes.getOrCreate("graphModel!GraphCategoryIdLike", validators.isGraphCategoryIdLike),
-    GraphObject: GraphCommonSchema.Schema.dataTypes.getOrCreate("graphModel!GraphObject", validators.isGraphObject),
-    GraphMetadata: GraphCommonSchema.Schema.dataTypes.getOrCreate("graphModel!GraphMetadata", validators.isGraphMetadata),
-    GraphSchema: GraphCommonSchema.Schema.dataTypes.getOrCreate("graphModel!GraphSchema", validators.isGraphSchema),
-    GraphSchemaNameLike: GraphCommonSchema.Schema.dataTypes.getOrCreate("graphModel!GraphSchemaNameLike", validators.isGraphSchemaNameLike),
-    Graph: GraphCommonSchema.Schema.dataTypes.getOrCreate("graphModel!Graph", validators.isGraph),
-}));
+
+function addSchemaType<T>(dataType: DataType<T>): DataType<T> {
+    GraphCommonSchema.Schema.dataTypes.add(dataType);
+    dataType._commonSchemaType = true;
+    return dataType;
+}
+
+function getOrCreateSchemaType<T>(name: string, validator: (value: any) => value is T): DataType<T> {
+    const dataType = GraphCommonSchema.Schema.dataTypes.getOrCreate(name, /*packageQualifier*/ undefined, validator);
+    dataType._commonSchemaType = true;
+    return dataType;
+}
+
+lazyInit(GraphCommonSchema, "DataTypes", () => {
+    const obj = {} as typeof GraphCommonSchema.DataTypes;
+    lazyInit(obj, "string", () => addSchemaType(DataType.string));
+    lazyInit(obj, "symbol", () => addSchemaType(DataType.symbol));
+    lazyInit(obj, "number", () => addSchemaType(DataType.number));
+    lazyInit(obj, "bigint", () => addSchemaType(DataType.bigint));
+    lazyInit(obj, "boolean", () => addSchemaType(DataType.boolean));
+    lazyInit(obj, "object", () => addSchemaType(DataType.object));
+    lazyInit(obj, "function", () => addSchemaType(DataType.function));
+    lazyInit(obj, "null", () => addSchemaType(DataType.null));
+    lazyInit(obj, "undefined", () => addSchemaType(DataType.undefined));
+    lazyInit(obj, "unknown", () => addSchemaType(DataType.unknown));
+    lazyInit(obj, "never", () => addSchemaType(DataType.never));
+    lazyInit(obj, "any", () => addSchemaType(DataType.any));
+    lazyInit(obj, "GraphNode", () => getOrCreateSchemaType("graphModel!GraphNode", validators.isGraphNode));
+    lazyInit(obj, "GraphNodeIdLike", () => getOrCreateSchemaType("graphModel!GraphNodeIdLike", validators.isGraphNodeIdLike));
+    lazyInit(obj, "GraphLink", () => getOrCreateSchemaType("graphModel!GraphLink", validators.isGraphLink));
+    lazyInit(obj, "GraphProperty", () => getOrCreateSchemaType("graphModel!GraphProperty", validators.isGraphProperty));
+    lazyInit(obj, "GraphPropertyIdLike", () => getOrCreateSchemaType("graphModel!GraphPropertyIdLike", validators.isGraphPropertyIdLike));
+    lazyInit(obj, "GraphCategory", () => getOrCreateSchemaType("graphModel!GraphCategory", validators.isGraphCategory));
+    lazyInit(obj, "GraphCategoryIdLike", () => getOrCreateSchemaType("graphModel!GraphCategoryIdLike", validators.isGraphCategoryIdLike));
+    lazyInit(obj, "GraphObject", () => getOrCreateSchemaType("graphModel!GraphObject", validators.isGraphObject));
+    lazyInit(obj, "GraphMetadata", () => getOrCreateSchemaType("graphModel!GraphMetadata", validators.isGraphMetadata));
+    lazyInit(obj, "GraphSchema", () => getOrCreateSchemaType("graphModel!GraphSchema", validators.isGraphSchema));
+    lazyInit(obj, "GraphSchemaNameLike", () => getOrCreateSchemaType("graphModel!GraphSchemaNameLike", validators.isGraphSchemaNameLike));
+    lazyInit(obj, "Graph", () => getOrCreateSchemaType("graphModel!Graph", validators.isGraph));
+    return obj;
+});
+
 lazyInit(GraphCommonSchema, "BaseUri", () => GraphCommonSchema.Schema.properties.getOrCreate("BaseUri", GraphCommonSchema.DataTypes.string, () => new GraphMetadata({ flags: GraphMetadataFlags.Removable })));
 lazyInit(GraphCommonSchema, "Version", () => GraphCommonSchema.Schema.properties.getOrCreate("Version", GraphCommonSchema.DataTypes.number, () => new GraphMetadata({ flags: GraphMetadataFlags.Removable })));
 lazyInit(GraphCommonSchema, "SourceNode", () => GraphCommonSchema.Schema.properties.getOrCreate("SourceNode", GraphCommonSchema.DataTypes.GraphNode, () => new GraphMetadata({ flags: GraphMetadataFlags.Immutable })));
