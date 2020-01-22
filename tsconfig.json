@@ -7,9 +7,11 @@
         "declaration": true,
         "sourceMap": true,
         "preserveConstEnums": true,
+        "skipLibCheck": true,
+        "incremental": true,
         "rootDir": "./src",
         "outDir": "./dist",
-        "types": ["jest", "jest-extended"]
+        "types": ["jest"]
     },
     "include": ["./src"]
 }

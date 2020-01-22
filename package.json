@@ -4,7 +4,12 @@
   "description": "JavaScript library for modeling directed graphs",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "scripts": {},
+  "scripts": {
+    "test": "gulp test",
+    "build": "gulp build",
+    "ci": "gulp ci",
+    "prepublishOnly": "gulp ci"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/rbuckton/graphmodel.git"
@@ -25,19 +30,14 @@
   },
   "homepage": "https://github.com/rbuckton/graphmodel#readme",
   "devDependencies": {
-    "@types/chai": "^4.0.3",
     "@types/jest": "^24.9.0",
-    "@types/mocha": "^2.2.41",
     "chai": "^4.1.1",
     "del": "^3.0.0",
-    "gulp": "^3.9.1",
-    "gulp-sourcemaps": "^2.6.0",
-    "gulp-tsb": "^2.0.4",
+    "gulp": "^4.0.2",
     "jest": "^24.9.0",
-    "jest-extended": "^0.11.2",
-    "mocha": "^3.5.0",
     "ts-jest": "^24.3.0",
-    "typescript": "^3.8.0-beta"
+    "typescript": "^3.8.0-beta",
+    "yargs": "^15.1.0"
   },
   "dependencies": {
     "@esfx/disposable": "^1.0.0-pre.13"

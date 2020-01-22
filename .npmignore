@@ -1,6 +1,7 @@
 .vscode
+__tests__
 node_modules
 src
 gulpfile.js
 jest.config.js
-__tests__
+tsconfig.tsbuildinfo
