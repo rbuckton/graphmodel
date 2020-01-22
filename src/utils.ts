@@ -16,7 +16,7 @@
 
 import { GraphObject } from "./graphObject";
 import { GraphCategory, GraphCategoryIdLike } from "./graphCategory";
-import { DataTypeNameLike, DataType } from "./dataType";
+import { DataTypeNameLike } from "./dataType";
 
 /* @internal */
 export function isDataTypeNameLike(value: any): value is DataTypeNameLike {
@@ -87,3 +87,18 @@ export const emptyIterable: IterableIterator<any> = {
     }
 };
 Object.freeze(emptyIterable);
+
+/* @internal */
+export function lazy<T>(factory: () => T): () => T {
+    let f: () => T = () => {
+        try {
+            const value = factory();
+            f = () => value;
+        }
+        catch (e) {
+            f = () => { throw e; }
+        }
+        return f();
+    };
+    return () => f();
+}

@@ -17,6 +17,7 @@
 import { GraphSchema } from "./graphSchema";
 import { GraphMetadata, GraphMetadataFlags } from "./graphMetadata";
 import { DataType } from "./dataType";
+import { lazy } from "./utils";
 import * as validators from "./validators";
 
 // NOTE: GraphCommonSchema depends on an unfortunate circularity on GraphSchema
@@ -88,56 +89,82 @@ export namespace GraphCommonSchema {
     export declare const UniqueId: import("./graphProperty").GraphProperty<import("./dataType").DataTypeNameLike>;
     export declare const Contains: import("./graphCategory").GraphCategory;
 }
-lazyInit(GraphCommonSchema, "Schema", () => new GraphSchema("GraphCommonSchema.Schema"));
 
-function addSchemaType<T>(dataType: DataType<T>): DataType<T> {
-    GraphCommonSchema.Schema.dataTypes.add(dataType);
-    dataType._commonSchemaType = true;
-    return dataType;
-}
+const lazyGraphCommonSchema = lazy(() => {
+    const Schema = new GraphSchema("GraphCommonSchema.Schema");
+    const DataTypes = {
+        string: addSchemaType(DataType.string),
+        symbol: addSchemaType(DataType.symbol),
+        number: addSchemaType(DataType.number),
+        bigint: addSchemaType(DataType.bigint),
+        boolean: addSchemaType(DataType.boolean),
+        object: addSchemaType(DataType.object),
+        function: addSchemaType(DataType.function),
+        null: addSchemaType(DataType.null),
+        undefined: addSchemaType(DataType.undefined),
+        unknown: addSchemaType(DataType.unknown),
+        never: addSchemaType(DataType.never),
+        any: addSchemaType(DataType.any),
+        GraphNode: getOrCreateSchemaType("graphModel!GraphNode", validators.isGraphNode),
+        GraphNodeIdLike: getOrCreateSchemaType("graphModel!GraphNodeIdLike", validators.isGraphNodeIdLike),
+        GraphLink: getOrCreateSchemaType("graphModel!GraphLink", validators.isGraphLink),
+        GraphProperty: getOrCreateSchemaType("graphModel!GraphProperty", validators.isGraphProperty),
+        GraphPropertyIdLike: getOrCreateSchemaType("graphModel!GraphPropertyIdLike", validators.isGraphPropertyIdLike),
+        GraphCategory: getOrCreateSchemaType("graphModel!GraphCategory", validators.isGraphCategory),
+        GraphCategoryIdLike: getOrCreateSchemaType("graphModel!GraphCategoryIdLike", validators.isGraphCategoryIdLike),
+        GraphObject: getOrCreateSchemaType("graphModel!GraphObject", validators.isGraphObject),
+        GraphMetadata: getOrCreateSchemaType("graphModel!GraphMetadata", validators.isGraphMetadata),
+        GraphSchema: getOrCreateSchemaType("graphModel!GraphSchema", validators.isGraphSchema),
+        GraphSchemaNameLike: getOrCreateSchemaType("graphModel!GraphSchemaNameLike", validators.isGraphSchemaNameLike),
+        Graph: getOrCreateSchemaType("graphModel!Graph", validators.isGraph),
+    };
+    const BaseUri = Schema.properties.getOrCreate("BaseUri", DataTypes.string, () => new GraphMetadata({ flags: GraphMetadataFlags.Removable }));
+    const Version = Schema.properties.getOrCreate("Version", DataTypes.number, () => new GraphMetadata({ flags: GraphMetadataFlags.Removable }));
+    const SourceNode = Schema.properties.getOrCreate("SourceNode", DataTypes.GraphNode, () => new GraphMetadata({ flags: GraphMetadataFlags.Immutable }));
+    const TargetNode = Schema.properties.getOrCreate("TargetNode", DataTypes.GraphNode, () => new GraphMetadata({ flags: GraphMetadataFlags.Immutable }));
+    const IsContainment = Schema.properties.getOrCreate("IsContainment", DataTypes.boolean, () => new GraphMetadata({ defaultValue: false }));
+    const IsPseudo = Schema.properties.getOrCreate("IsPseudo", DataTypes.boolean, () => new GraphMetadata({ defaultValue: false, flags: GraphMetadataFlags.Removable | GraphMetadataFlags.Serializable | GraphMetadataFlags.Sharable }));
+    const IsTag = Schema.properties.getOrCreate("IsTag", DataTypes.boolean, () => new GraphMetadata({ defaultValue: false }));
+    const Label = Schema.properties.getOrCreate("Label", DataTypes.string, () => new GraphMetadata());
+    const UniqueId = Schema.properties.getOrCreate("UniqueId", DataTypes.GraphNodeIdLike, () => new GraphMetadata({ flags: GraphMetadataFlags.Immutable }));
+    const Contains = Schema.categories.getOrCreate("Contains", () => new GraphMetadata({ properties: [[IsContainment, true]] }));
+    return {
+        Schema,
+        DataTypes,
+        BaseUri,
+        Version,
+        SourceNode,
+        TargetNode,
+        IsContainment,
+        IsPseudo,
+        IsTag,
+        Label,
+        UniqueId,
+        Contains,
+    };
 
-function getOrCreateSchemaType<T>(name: string, validator: (value: any) => value is T): DataType<T> {
-    const dataType = GraphCommonSchema.Schema.dataTypes.getOrCreate(name, /*packageQualifier*/ undefined, validator);
-    dataType._commonSchemaType = true;
-    return dataType;
-}
+    function addSchemaType<T>(dataType: DataType<T>): DataType<T> {
+        Schema.dataTypes.add(dataType);
+        dataType._commonSchemaType = true;
+        return dataType;
+    }
 
-lazyInit(GraphCommonSchema, "DataTypes", () => {
-    const obj = {} as typeof GraphCommonSchema.DataTypes;
-    lazyInit(obj, "string", () => addSchemaType(DataType.string));
-    lazyInit(obj, "symbol", () => addSchemaType(DataType.symbol));
-    lazyInit(obj, "number", () => addSchemaType(DataType.number));
-    lazyInit(obj, "bigint", () => addSchemaType(DataType.bigint));
-    lazyInit(obj, "boolean", () => addSchemaType(DataType.boolean));
-    lazyInit(obj, "object", () => addSchemaType(DataType.object));
-    lazyInit(obj, "function", () => addSchemaType(DataType.function));
-    lazyInit(obj, "null", () => addSchemaType(DataType.null));
-    lazyInit(obj, "undefined", () => addSchemaType(DataType.undefined));
-    lazyInit(obj, "unknown", () => addSchemaType(DataType.unknown));
-    lazyInit(obj, "never", () => addSchemaType(DataType.never));
-    lazyInit(obj, "any", () => addSchemaType(DataType.any));
-    lazyInit(obj, "GraphNode", () => getOrCreateSchemaType("graphModel!GraphNode", validators.isGraphNode));
-    lazyInit(obj, "GraphNodeIdLike", () => getOrCreateSchemaType("graphModel!GraphNodeIdLike", validators.isGraphNodeIdLike));
-    lazyInit(obj, "GraphLink", () => getOrCreateSchemaType("graphModel!GraphLink", validators.isGraphLink));
-    lazyInit(obj, "GraphProperty", () => getOrCreateSchemaType("graphModel!GraphProperty", validators.isGraphProperty));
-    lazyInit(obj, "GraphPropertyIdLike", () => getOrCreateSchemaType("graphModel!GraphPropertyIdLike", validators.isGraphPropertyIdLike));
-    lazyInit(obj, "GraphCategory", () => getOrCreateSchemaType("graphModel!GraphCategory", validators.isGraphCategory));
-    lazyInit(obj, "GraphCategoryIdLike", () => getOrCreateSchemaType("graphModel!GraphCategoryIdLike", validators.isGraphCategoryIdLike));
-    lazyInit(obj, "GraphObject", () => getOrCreateSchemaType("graphModel!GraphObject", validators.isGraphObject));
-    lazyInit(obj, "GraphMetadata", () => getOrCreateSchemaType("graphModel!GraphMetadata", validators.isGraphMetadata));
-    lazyInit(obj, "GraphSchema", () => getOrCreateSchemaType("graphModel!GraphSchema", validators.isGraphSchema));
-    lazyInit(obj, "GraphSchemaNameLike", () => getOrCreateSchemaType("graphModel!GraphSchemaNameLike", validators.isGraphSchemaNameLike));
-    lazyInit(obj, "Graph", () => getOrCreateSchemaType("graphModel!Graph", validators.isGraph));
-    return obj;
+    function getOrCreateSchemaType<T>(name: string, validator: (value: any) => value is T): DataType<T> {
+        const dataType = Schema.dataTypes.getOrCreate(name, /*packageQualifier*/ undefined, validator);
+        dataType._commonSchemaType = true;
+        return dataType;
+    }
 });
 
-lazyInit(GraphCommonSchema, "BaseUri", () => GraphCommonSchema.Schema.properties.getOrCreate("BaseUri", GraphCommonSchema.DataTypes.string, () => new GraphMetadata({ flags: GraphMetadataFlags.Removable })));
-lazyInit(GraphCommonSchema, "Version", () => GraphCommonSchema.Schema.properties.getOrCreate("Version", GraphCommonSchema.DataTypes.number, () => new GraphMetadata({ flags: GraphMetadataFlags.Removable })));
-lazyInit(GraphCommonSchema, "SourceNode", () => GraphCommonSchema.Schema.properties.getOrCreate("SourceNode", GraphCommonSchema.DataTypes.GraphNode, () => new GraphMetadata({ flags: GraphMetadataFlags.Immutable })));
-lazyInit(GraphCommonSchema, "TargetNode", () => GraphCommonSchema.Schema.properties.getOrCreate("TargetNode", GraphCommonSchema.DataTypes.GraphNode, () => new GraphMetadata({ flags: GraphMetadataFlags.Immutable })));
-lazyInit(GraphCommonSchema, "IsContainment", () => GraphCommonSchema.Schema.properties.getOrCreate("IsContainment", GraphCommonSchema.DataTypes.boolean, () => new GraphMetadata({ defaultValue: false })));
-lazyInit(GraphCommonSchema, "IsPseudo", () => GraphCommonSchema.Schema.properties.getOrCreate("IsPseudo", GraphCommonSchema.DataTypes.boolean, () => new GraphMetadata({ defaultValue: false, flags: GraphMetadataFlags.Removable | GraphMetadataFlags.Serializable | GraphMetadataFlags.Sharable })));
-lazyInit(GraphCommonSchema, "IsTag", () => GraphCommonSchema.Schema.properties.getOrCreate("IsTag", GraphCommonSchema.DataTypes.boolean, () => new GraphMetadata({ defaultValue: false })));
-lazyInit(GraphCommonSchema, "Label", () => GraphCommonSchema.Schema.properties.getOrCreate("Label", GraphCommonSchema.DataTypes.string, () => new GraphMetadata()));
-lazyInit(GraphCommonSchema, "UniqueId", () => GraphCommonSchema.Schema.properties.getOrCreate("UniqueId", GraphCommonSchema.DataTypes.GraphNodeIdLike, () => new GraphMetadata({ flags: GraphMetadataFlags.Immutable })));
-lazyInit(GraphCommonSchema, "Contains", () => GraphCommonSchema.Schema.categories.getOrCreate("Contains", () => new GraphMetadata({ properties: [[GraphCommonSchema.IsContainment, true]] })));
+lazyInit(GraphCommonSchema, "Schema", () => lazyGraphCommonSchema().Schema);
+lazyInit(GraphCommonSchema, "DataTypes", () => lazyGraphCommonSchema().DataTypes);
+lazyInit(GraphCommonSchema, "BaseUri", () => lazyGraphCommonSchema().BaseUri);
+lazyInit(GraphCommonSchema, "Version", () => lazyGraphCommonSchema().Version);
+lazyInit(GraphCommonSchema, "SourceNode", () => lazyGraphCommonSchema().SourceNode);
+lazyInit(GraphCommonSchema, "TargetNode", () => lazyGraphCommonSchema().TargetNode);
+lazyInit(GraphCommonSchema, "IsContainment", () => lazyGraphCommonSchema().IsContainment);
+lazyInit(GraphCommonSchema, "IsPseudo", () => lazyGraphCommonSchema().IsPseudo);
+lazyInit(GraphCommonSchema, "IsTag", () => lazyGraphCommonSchema().IsTag);
+lazyInit(GraphCommonSchema, "Label", () => lazyGraphCommonSchema().Label);
+lazyInit(GraphCommonSchema, "UniqueId", () => lazyGraphCommonSchema().UniqueId);
+lazyInit(GraphCommonSchema, "Contains", () => lazyGraphCommonSchema().Contains);
