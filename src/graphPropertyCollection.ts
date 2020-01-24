@@ -14,14 +14,17 @@
  * limitations under the License.
  */
 
-import { GraphSchema } from "./graphSchema";
-import { GraphProperty, GraphPropertyIdLike } from "./graphProperty";
-import { GraphMetadata } from "./graphMetadata";
-import { isGraphPropertyIdLike } from "./validators";
+import type { DataTypeNameLike } from "./dataTypeNameLike";
+import type { GraphSchema } from "./graphSchema";
+import type { GraphMetadata } from "./graphMetadata";
+import type { GraphPropertyIdLike } from "./graphPropertyIdLike";
+import type { TypeOfDataTypeName } from "./typeOfDataTypeName";
 import { BaseCollection } from "./baseCollection";
-import { TypeOfDataTypeName, DataTypeNameLike, DataType } from "./dataType";
-import { isDataTypeNameLike } from "./utils";
+import { DataType } from "./dataType";
 import { EventEmitter, EventSubscription } from "./events";
+import { GraphProperty } from "./graphProperty";
+import { isGraphPropertyIdLike } from "./graphPropertyIdLike";
+import { isDataTypeNameLike } from "./dataTypeNameLike";
 
 /**
  * A collection of graph properties in a schema.

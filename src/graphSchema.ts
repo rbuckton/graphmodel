@@ -14,21 +14,21 @@
  * limitations under the License.
  */
 
+import type { DataTypeNameLike } from "./dataTypeNameLike";
+import type { GraphCategory } from "./graphCategory";
+import type { GraphCategoryIdLike } from "./graphCategoryIdLike";
+import type { GraphProperty } from "./graphProperty";
+import type { GraphPropertyIdLike } from "./graphPropertyIdLike";
+import type { GraphSchemaNameLike } from "./graphSchemaNameLike";
+import type { Graph } from "./graph";
 import { DataTypeCollection } from "./dataTypeCollection";
-import { GraphSchemaCollection } from "./graphSchemaCollection";
-import { GraphCategoryCollection } from "./graphCategoryCollection";
-import { GraphPropertyCollection } from "./graphPropertyCollection";
-import { DataTypeNameLike, DataType } from "./dataType";
-import { GraphCategory, GraphCategoryIdLike } from "./graphCategory";
-import { GraphProperty, GraphPropertyIdLike } from "./graphProperty";
-import { Graph } from "./graph";
-import { isGraphSchemaNameLike } from "./validators";
+import { DataType } from "./dataType";
+import { DataTypeKey } from "./dataTypeKey";
 import { EventEmitter, EventSubscription } from "./events";
-
-/**
- * Represents a valid value for the name of a GraphSchema.
- */
-export type GraphSchemaNameLike = string | symbol;
+import { GraphCategoryCollection } from "./graphCategoryCollection";
+import { GraphSchemaCollection } from "./graphSchemaCollection";
+import { GraphPropertyCollection } from "./graphPropertyCollection";
+import { isGraphSchemaNameLike } from "./graphSchemaNameLike";
 
 /**
  * A GraphSchema defines a related set of graph categories and properties.
@@ -214,3 +214,11 @@ export interface GraphSchemaEvents {
      */
     onChanged?: () => void;
 }
+
+/* @internal */
+export const isGraphSchema = (value: any): value is GraphSchema => value instanceof GraphSchema;
+
+export const DATATYPE_GraphSchema = DataType._create<GraphSchema>(DataTypeKey.fromString("GraphSchema", "graphmodel"), {
+    validate: isGraphSchema,
+});
+

@@ -14,16 +14,18 @@
  * limitations under the License.
  */
 
-import { GraphCategory, GraphCategoryIdLike } from "./graphCategory";
-import { GraphProperty, GraphPropertyIdLike } from "./graphProperty";
-import { Graph } from "./graph";
-import { GraphSchema } from "./graphSchema";
-import { isIterableObject, getCategorySet } from "./utils";
-import { isGraphCategoryIdLike, isGraphPropertyIdLike } from "./validators";
-import { GraphCommonSchema } from "./graphCommonSchema";
+import type { GraphCategory } from "./graphCategory";
+import type { GraphProperty } from "./graphProperty";
+import type { GraphSchema } from "./graphSchema";
+import type { Graph } from "./graph";
 import { ChangeTrackedSet } from "./changeTrackedSet";
 import { ChangeTrackedMap } from "./changeTrackedMap";
+import { DataType } from "./dataType";
+import { DataTypeKey } from "./dataTypeKey";
 import { EventEmitter, EventSubscription } from "./events";
+import { GraphCategoryIdLike, isGraphCategoryIdLike } from "./graphCategoryIdLike";
+import { GraphPropertyIdLike, isGraphPropertyIdLike } from "./graphPropertyIdLike";
+import { isIterableObject, getCategorySet } from "./utils";
 
 /**
  * The base definition of an extensible graph object.
@@ -472,3 +474,11 @@ export interface GraphObjectEvents {
      */
     onPropertyChanged?: (name: GraphPropertyIdLike) => void;
 }
+
+/* @internal */
+export const isGraphObject = (value: any): value is GraphObject => value instanceof GraphObject;
+
+/* @internal */
+export const DATATYPE_GraphObject = DataType._create<GraphObject>(DataTypeKey.fromString("GraphObject", "graphmodel"), { validate: isGraphObject });
+
+import { GraphCommonSchema } from "./graphCommonSchema";

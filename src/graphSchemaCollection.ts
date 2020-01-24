@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-import { GraphSchema, GraphSchemaNameLike } from "./graphSchema";
-import { isGraphSchemaNameLike } from "./validators";
+import type { GraphSchema } from "./graphSchema";
+import type { GraphSchemaNameLike } from "./graphSchemaNameLike";
 import { BaseCollection } from "./baseCollection";
 import { EventEmitter, EventSubscription } from "./events";
+import { isGraphSchemaNameLike } from "./graphSchemaNameLike";
 
 /**
  * A collection of child schemas in a schema.

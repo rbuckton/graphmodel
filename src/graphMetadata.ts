@@ -14,8 +14,10 @@
  * limitations under the License.
  */
 
+import type { GraphProperty } from "./graphProperty";
 import { GraphObject } from "./graphObject";
-import { GraphProperty } from "./graphProperty";
+import { DataType } from "./dataType";
+import { DataTypeKey } from "./dataTypeKey";
 
 /**
  * Graph metadata defines information about a GraphProperty or GraphCategory.
@@ -197,3 +199,9 @@ export const enum GraphMetadataFlags {
     // Undoable = 1 << 6,
     Default = Removable | Sharable /* | Browsable */ | Serializable
 }
+
+/* @internal */
+export const isGraphMetadata = (value: any): value is GraphMetadata => value instanceof GraphMetadata;
+
+/* @internal */
+export const DATATYPE_GraphMetadata = DataType._create<GraphMetadata>(DataTypeKey.fromString("GraphMetadata", "graphmodel"), { validate: isGraphMetadata });

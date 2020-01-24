@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-import { GraphSchema } from "./graphSchema";
-import { GraphCategory, GraphCategoryIdLike } from "./graphCategory";
-import { GraphMetadata } from "./graphMetadata";
-import { isGraphCategoryIdLike } from "./validators";
+import type { GraphSchema } from "./graphSchema";
+import type { GraphMetadata } from "./graphMetadata";
+import { GraphCategory } from "./graphCategory";
 import { BaseCollection } from "./baseCollection";
 import { EventEmitter, EventSubscription } from "./events";
+import { GraphCategoryIdLike, isGraphCategoryIdLike } from "./graphCategoryIdLike";
 
 /**
  * A collection of graph categories in a schema.

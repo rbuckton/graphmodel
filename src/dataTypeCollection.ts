@@ -14,11 +14,14 @@
  * limitations under the License.
  */
 
-import { GraphSchema } from "./graphSchema";
+import type { GraphSchema } from "./graphSchema";
+import type { DataTypeNameLike } from "./dataTypeNameLike";
 import { BaseCollection } from "./baseCollection";
-import { DataType, DataTypeNameLike, DataTypeKey } from "./dataType";
+import { DataType, DataTypeOptions } from "./dataType";
 import { EventEmitter, EventSubscription } from "./events";
-import { isDataTypeNameLike } from "./utils";
+import { DataTypeKey } from "./dataTypeKey";
+import { isDataTypeNameLike } from "./dataTypeNameLike";
+import * as validators from "./validators";
 
 /**
  * A collection of graph properties in a schema.
@@ -90,20 +93,31 @@ export class DataTypeCollection extends BaseCollection<DataType> {
     /**
      * Gets the data type with the specified name. If one does not exist, a new data type is created.
      */
+    public getOrCreate<V = any>(name: DataTypeNameLike, options?: DataTypeOptions<V>): DataType<V>;
+    /**
+     * Gets the data type with the specified name. If one does not exist, a new data type is created.
+     */
     public getOrCreate<V = any>(name: DataTypeNameLike, packageQualifier?: string, validator?: ((value: any) => value is V) | ((value: any) => boolean)): DataType<V>;
-    public getOrCreate(name: DataTypeNameLike, packageQualifierOrValidator?: string | ((value: any) => boolean), validator?: ((value: any) => boolean)): DataType {
+    /**
+     * Gets the data type with the specified name. If one does not exist, a new data type is created.
+     */
+    public getOrCreate<V = any>(name: DataTypeNameLike, packageQualifier?: string, options?: DataTypeOptions<V>): DataType<V>;
+    public getOrCreate(name: DataTypeNameLike, packageQualifierOrOptions?: string | DataTypeOptions<any> | ((value: any) => boolean), options?: DataTypeOptions<any> | ((value: any) => boolean)): DataType {
         let packageQualifier: string | undefined;
-        if (typeof packageQualifierOrValidator === "function") {
-            validator = packageQualifierOrValidator;
+        if (validators.isFunction(packageQualifierOrOptions) || validators.isObject(packageQualifierOrOptions)) {
+            options = packageQualifierOrOptions;
         }
         else {
-            packageQualifier = packageQualifierOrValidator;
+            packageQualifier = packageQualifierOrOptions;
+        }
+        if (validators.isFunction(options)) {
+            options = { validate: options };
         }
 
         const key = DataTypeKey.from(name, packageQualifier);
         let dataType = this._types?.get(key.id);
         if (dataType === undefined) {
-            this.add(dataType = DataType._create(key, validator));
+            this.add(dataType = DataType._create(key, options));
         }
 
         return dataType as DataType;
@@ -112,12 +126,23 @@ export class DataTypeCollection extends BaseCollection<DataType> {
     /**
      * Gets the data type for the provided class. If one does not exist, a new data type is created.
      */
-    public getOrCreateClass<V = any>(ctor: new (...args: any) => V, packageQualifier?: string) {
+    public getOrCreateClass<V = any>(ctor: new (...args: any) => V, packageQualifier?: string, options?: DataTypeOptions<V>) {
         const key = DataTypeKey.fromClass(ctor, packageQualifier);
         let dataType = this._types?.get(key.id);
         if (dataType === undefined) {
             const validator = (value: any) => value instanceof ctor;
-            this.add(dataType = DataType._create(key, validator));
+            const newOptions: DataTypeOptions<V> = {
+                validate: options?.validate !== undefined ?
+                    value => validator(value) && (options!.validate!(value)) :
+                    validator,
+            };
+            if (options?.canConvert !== undefined) {
+                newOptions.canConvert = options.canConvert.bind(options);
+            }
+            if (options?.convert !== undefined) {
+                newOptions.convert = options.convert.bind(options)
+            }
+            this.add(dataType = DataType._create(key, newOptions));
         }
         return dataType as DataType<V>;
     }
@@ -156,7 +181,7 @@ export class DataTypeCollection extends BaseCollection<DataType> {
             const ownDataType = this._types.get(key.id);
             if (ownDataType !== undefined) {
                 const oldSize = this._types.size;
-                this._types.delete(name);
+                this._types.delete(key.id);
                 this._size -= oldSize - this._types.size;
                 this._raiseOnDeleted(ownDataType);
                 return isDataTypeNameLike(dataType) ? ownDataType : true;

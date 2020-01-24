@@ -62,11 +62,6 @@ export declare class DataType<T = any> {
      */
     private constructor();
     /**
-     * Creates a data type that represents a union of multiple data types.
-     */
-    static union<A extends readonly DataType[]>(...dataTypes: A):
-        DataType<A[number]>;
-    /**
      * Gets the name for the data type
      */
     get name(): DataTypeNameLike;

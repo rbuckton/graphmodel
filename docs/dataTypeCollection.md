@@ -58,6 +58,10 @@ export declare class DataTypeCollection extends BaseCollection<DataType> {
      */
     getOrCreateClass<V = any>(ctor: new (...args: any) => V, packageQualifier?: string): DataType<V>;
     /**
+     * Gets a data type that represents a union of multiple data types.
+     */
+    union<A extends readonly DataType[]>(...dataTypes: A): DataType<A[number] extends DataType<infer T> ? T : never>;
+    /**
      * Adds a data type to the collection.
      */
     add(dataType: DataType): this;

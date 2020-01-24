@@ -14,24 +14,26 @@
  * limitations under the License.
  */
 
-import { GraphCategory, GraphCategoryIdLike } from "./graphCategory";
-import { GraphProperty, GraphPropertyIdLike } from "./graphProperty";
-import { GraphNode, GraphNodeIdLike } from "./graphNode";
-import { Graph } from "./graph";
-import { hasCategoryInSetExact, getCategorySet, emptyIterable } from "./utils";
-import { isGraphNodeIdLike } from "./validators";
+import type { GraphCategory } from "./graphCategory";
+import type { GraphProperty } from "./graphProperty";
+import type { Graph } from "./graph";
+import type { GraphPropertyIdLike } from "./graphPropertyIdLike";
+import type { GraphCategoryIdLike } from "./graphCategoryIdLike";
+import { GraphNode } from "./graphNode";
 import { BaseCollection } from "./baseCollection";
+import { EventEmitter, EventSubscription } from "./events";
 import { ChangeTrackedMap } from "./changeTrackedMap";
 /* @internal */
 import { ChangedTrackedParent, ChangeTracker } from "./graphTransactionScope";
-import { EventEmitter, EventSubscription } from "./events";
+import { GraphNodeIdLike, isGraphNodeIdLike } from "./graphNodeIdLike";
+import { hasCategoryInSetExact, getCategorySet, emptyIterable, getTaggedId } from "./utils";
 
 /**
  * A collection of nodes within a Graph.
  */
 export class GraphNodeCollection extends BaseCollection<GraphNode> {
     private _graph: Graph;
-    private _nodes: ChangeTrackedMap<GraphNodeIdLike, GraphNode> | undefined;
+    private _nodes: ChangeTrackedMap<string | symbol, GraphNode> | undefined;
     private _events?: EventEmitter<GraphNodeCollectionEvents>;
 
     /* @internal */ static _create(graph: Graph) {
@@ -70,15 +72,15 @@ export class GraphNodeCollection extends BaseCollection<GraphNode> {
      */
     public has(node: GraphNode | GraphNodeIdLike): boolean {
         return isGraphNodeIdLike(node) ?
-            this._nodes?.has(node) ?? false :
-            this._nodes?.get(node.id) === node;
+            this._nodes?.has(nodeId(node)) ?? false :
+            this._nodes?.get(nodeId(node.id)) === node;
     }
 
     /**
      * Gets the node with the provided id.
      */
     public get(id: GraphNodeIdLike): GraphNode | undefined {
-        return this._nodes?.get(id);
+        return this._nodes?.get(nodeId(id));
     }
 
     /**
@@ -111,7 +113,7 @@ export class GraphNodeCollection extends BaseCollection<GraphNode> {
             if (this._nodes === undefined) {
                 this._nodes = new ChangeTrackedMap<string, GraphNode>(this);
             }
-            this._nodes.set(node.id, node);
+            this._nodes.set(nodeId(node.id), node);
             if (node.linkCount) {
                 for (const link of node.links()) {
                     this.graph.links.add(link);
@@ -135,10 +137,10 @@ export class GraphNodeCollection extends BaseCollection<GraphNode> {
     public delete(node: GraphNode | GraphNodeIdLike): GraphNode | boolean;
     public delete(node: GraphNode | GraphNodeIdLike): GraphNode | boolean {
         if (this._nodes !== undefined) {
-            const nodeId = isGraphNodeIdLike(node) ? node : node.id;
-            const ownNode = this._nodes.get(nodeId);
+            const key = nodeId(isGraphNodeIdLike(node) ? node : node.id);
+            const ownNode = this._nodes.get(key);
             if (ownNode !== undefined) {
-                this._nodes.delete(nodeId, ownNode);
+                this._nodes.delete(key, ownNode);
                 if (ownNode.linkCount) {
                     for (const link of ownNode.links()) {
                         this.graph.links.delete(link);
@@ -281,7 +283,8 @@ export class GraphNodeCollection extends BaseCollection<GraphNode> {
 }
 
 /* @internal */
-export interface GraphNodeCollection extends ChangedTrackedParent {}
+export interface GraphNodeCollection extends ChangedTrackedParent {
+}
 
 export interface GraphNodeCollectionEvents {
     /**
@@ -293,4 +296,8 @@ export interface GraphNodeCollectionEvents {
      * An event raised when a node is removed from the collection.
      */
     onDeleted?: (node: GraphNode) => void;
+}
+
+function nodeId(id: GraphNodeIdLike): string | symbol {
+    return typeof id === "symbol" ? id : getTaggedId(id);
 }

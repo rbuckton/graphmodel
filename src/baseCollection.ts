@@ -15,8 +15,7 @@
  */
 
 export abstract class BaseCollection<T> {
-    abstract values(): IterableIterator<T>;
-
+    abstract values(): Iterable<T>;
     /**
      * Returns `true` if every element in the collection matches the provided callback; otherwise, `false`.
      */
@@ -98,4 +97,3 @@ export abstract class BaseCollection<T> {
         }
     }
 }
-

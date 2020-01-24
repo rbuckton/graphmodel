@@ -14,20 +14,18 @@
  * limitations under the License.
  */
 
-import { GraphSchema } from "./graphSchema";
+import type { GraphSchema } from "./graphSchema";
+import type { GraphCategory } from "./graphCategory";
+import type { Graph } from "./graph";
+import type { GraphCategoryIdLike } from "./graphCategoryIdLike";
 import { GraphCommonSchema } from "./graphCommonSchema";
-import { GraphCategory, GraphCategoryIdLike } from "./graphCategory";
 import { GraphObject } from "./graphObject";
 import { GraphLink } from "./graphLink";
-import { Graph } from "./graph";
-import { hasCategoryInSetExact, getCategorySet } from "./utils";
-import { isGraphNodeIdLike } from "./validators";
 import { ChangeTrackedSet } from "./changeTrackedSet";
-
-/**
- * Represents a valid value for the id of a GraphNode.
- */
-export type GraphNodeIdLike = string | symbol;
+import { GraphNodeIdLike, isGraphNodeIdLike } from "./graphNodeIdLike";
+import { DataType } from "./dataType";
+import { DataTypeKey } from "./dataTypeKey";
+import { hasCategoryInSetExact, getCategorySet } from "./utils";
 
 /**
  * Represents a node in the directed graph.
@@ -555,3 +553,9 @@ export interface GraphNodeTraversal {
      */
     acceptNode?: (node: GraphNode) => boolean;
 }
+
+/* @internal */
+export const isGraphNode = (value: any): value is GraphNode => value instanceof GraphNode;
+
+/* @internal */
+export const DATATYPE_GraphNode = DataType._create<GraphNode>(DataTypeKey.fromString("GraphNode", "graphmodel"), { validate: isGraphNode });

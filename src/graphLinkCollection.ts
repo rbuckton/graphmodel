@@ -14,16 +14,19 @@
  * limitations under the License.
  */
 
-import { GraphCategory, GraphCategoryIdLike } from "./graphCategory";
-import { GraphProperty, GraphPropertyIdLike } from "./graphProperty";
-import { GraphLink } from "./graphLink";
-import { GraphNode, GraphNodeIdLike } from "./graphNode";
-import { Graph } from "./graph";
-import { hasCategoryInSetExact, getCategorySet, getTaggedId, emptyIterable } from "./utils";
-import { isGraphNodeIdLike } from "./validators";
+import type { GraphCategory } from "./graphCategory";
+import type { GraphCategoryIdLike } from "./graphCategoryIdLike";
+import type { GraphProperty } from "./graphProperty";
+import type { GraphPropertyIdLike } from "./graphPropertyIdLike";
+import type { GraphNode } from "./graphNode";
+import type { GraphNodeIdLike } from "./graphNodeIdLike";
+import type { Graph } from "./graph";
 import { BaseCollection } from "./baseCollection";
 import { ChangeTrackedMap } from "./changeTrackedMap";
 import { EventEmitter, EventSubscription } from "./events";
+import { GraphLink } from "./graphLink";
+import { hasCategoryInSetExact, getCategorySet, getTaggedId, emptyIterable } from "./utils";
+import { isGraphNodeIdLike } from "./graphNodeIdLike";
 
 /**
  * A collection of links within a Graph.

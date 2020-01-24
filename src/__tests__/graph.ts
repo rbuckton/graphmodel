@@ -1,3 +1,5 @@
+(Error as any).stackTraceLimit = 500;
+
 import { Graph } from "../graph";
 import { GraphTransactionScope } from "../graphTransactionScope";
 

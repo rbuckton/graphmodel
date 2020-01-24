@@ -14,14 +14,9 @@
  * limitations under the License.
  */
 
-import { GraphObject } from "./graphObject";
-import { GraphCategory, GraphCategoryIdLike } from "./graphCategory";
-import { DataTypeNameLike } from "./dataType";
-
-/* @internal */
-export function isDataTypeNameLike(value: any): value is DataTypeNameLike {
-    return typeof value === "string" || typeof value === "symbol";
-}
+import type { GraphObject } from "./graphObject";
+import type { GraphCategory } from "./graphCategory";
+import type { GraphCategoryIdLike } from "./graphCategoryIdLike";
 
 /* @internal */
 export function isIterableObject(obj: any): obj is object & Iterable<any> {
@@ -65,15 +60,18 @@ export function getTaggedId(id: string | symbol) {
     if (typeof id === "string") {
         return `${TAG_STRING},${id}`;
     }
-    if (Symbol.keyFor(id) !== undefined) {
-        return `${TAG_SYMBOLFOR},${id.toString()}`;
+    if (typeof id === "symbol") {
+        if (Symbol.keyFor(id) !== undefined) {
+            return `${TAG_SYMBOLFOR},${id.toString()}`;
+        }
+        let symbolId = symbolIds.get(id);
+        if (symbolId === undefined) {
+            symbolId = nextSymbolId++;
+            symbolIds.set(id, symbolId);
+        }
+        return `${TAG_SYMBOL},${symbolId},${id.toString()}`;
     }
-    let symbolId = symbolIds.get(id);
-    if (symbolId === undefined) {
-        symbolId = nextSymbolId++;
-        symbolIds.set(id, symbolId);
-    }
-    return `${TAG_SYMBOL},${symbolId},${id.toString()}`;
+    throw new TypeError("Unsupported id type");
 }
 
 const done: IteratorResult<any> = { done: true, value: undefined };
@@ -101,4 +99,36 @@ export function lazy<T>(factory: () => T): () => T {
         return f();
     };
     return () => f();
+}
+
+/* @internal */
+export function lazyInit<T, K extends keyof T>(obj: T, key: K, factory: () => T[K]) {
+    let hasValue = false;
+    let value: T[K];
+    Object.defineProperty(obj, key, {
+        enumerable: true,
+        configurable: true,
+        get: () => {
+            if (hasValue) {
+                return value;
+            }
+            value = factory();
+            hasValue = true;
+            try {
+                Object.defineProperty(obj, key, {
+                    enumerable: true,
+                    configurable: true,
+                    writable: false,
+                    value
+                });
+            } catch {
+            }
+            return value;
+        }
+    });
+}
+
+/* @internal */
+export function combineHashes(x: number, y: number) {
+    return ((x << 7) | (x >>> 25)) ^ y;
 }

@@ -14,22 +14,28 @@
  * limitations under the License.
  */
 
+export { DataType } from "./dataType";
+export { DataTypeNameLike } from "./dataTypeNameLike";
+export { DataTypeCollection, DataTypeCollectionEvents } from "./dataTypeCollection";
+export { TypeOfDataTypeName } from "./typeOfDataTypeName";
+export { EventSubscription } from "./events";
 export { GraphMetadataContainer } from "./graphMetadataContainer";
 export { GraphMetadata, GraphMetadataOptions } from "./graphMetadata";
 export { GraphObject, GraphObjectEvents } from "./graphObject";
-export { GraphCategory, GraphCategoryIdLike } from "./graphCategory";
+export { GraphCategory } from "./graphCategory";
+export { GraphCategoryIdLike } from "./graphCategoryIdLike";
 export { GraphCategoryCollection, GraphCategoryCollectionEvents } from "./graphCategoryCollection";
-export { GraphProperty, GraphPropertyIdLike } from "./graphProperty";
+export { GraphProperty } from "./graphProperty";
+export { GraphPropertyIdLike } from "./graphPropertyIdLike";
 export { GraphPropertyCollection, GraphPropertyCollectionEvents } from "./graphPropertyCollection";
-export { GraphSchema, GraphSchemaNameLike } from "./graphSchema";
+export { GraphSchema } from "./graphSchema";
+export { GraphSchemaNameLike } from "./graphSchemaNameLike";
 export { GraphSchemaCollection, GraphSchemaCollectionEvents } from "./graphSchemaCollection";
 export { GraphCommonSchema } from "./graphCommonSchema";
-export { GraphNode, GraphNodeIdLike, GraphNodeTraversal } from "./graphNode";
+export { GraphNode, GraphNodeTraversal } from "./graphNode";
+export { GraphNodeIdLike } from "./graphNodeIdLike";
 export { GraphNodeCollection, GraphNodeCollectionEvents } from "./graphNodeCollection";
 export { GraphLink, GraphLinkTraversal } from "./graphLink";
 export { GraphLinkCollection, GraphLinkCollectionEvents } from "./graphLinkCollection";
 export { Graph } from "./graph";
 export { GraphTransactionScope } from "./graphTransactionScope";
-export { DataType, DataTypeNameLike, TypeOfDataTypeName } from "./dataType";
-export { DataTypeCollection, DataTypeCollectionEvents } from "./dataTypeCollection";
-export { EventSubscription } from "./events";

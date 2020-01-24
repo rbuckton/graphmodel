@@ -1,6 +1,6 @@
 {
   "name": "graphmodel",
-  "version": "1.0.17",
+  "version": "1.0.18",
   "description": "JavaScript library for modeling directed graphs",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -40,6 +40,8 @@
     "yargs": "^15.1.0"
   },
   "dependencies": {
-    "@esfx/disposable": "^1.0.0-pre.13"
+    "@esfx/disposable": "^1.0.0-pre.13",
+    "@esfx/equatable": "^1.0.0-pre.13",
+    "@esfx/indexed-object": "^1.0.0-pre.9"
   }
 }

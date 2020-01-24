@@ -14,14 +14,11 @@
  * limitations under the License.
  */
 
+import type { GraphMetadata } from "./graphMetadata";
 import { GraphMetadataContainer } from "./graphMetadataContainer";
-import { GraphMetadata } from "./graphMetadata";
-import { isGraphCategoryIdLike } from "./validators";
-
-/**
- * Represents a valid id for a category.
- */
-export type GraphCategoryIdLike = string | symbol;
+import { GraphCategoryIdLike, isGraphCategoryIdLike } from "./graphCategoryIdLike";
+import { DataType } from "./dataType";
+import { DataTypeKey } from "./dataTypeKey";
 
 /**
  * Graph catagories are used to categorize graph objects such as nodes or links.
@@ -93,3 +90,9 @@ export class GraphCategory extends GraphMetadataContainer {
         return false;
     }
 }
+
+/* @internal */
+export const isGraphCategory = (value: any): value is GraphCategory => value instanceof GraphCategory;
+
+/* @internal */
+export const DATATYPE_GraphCategory = DataType._create<GraphCategory>(DataTypeKey.fromString("GraphCategory", "graphmodel"), { validate: isGraphCategory });

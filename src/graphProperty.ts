@@ -14,15 +14,11 @@
  * limitations under the License.
  */
 
+import type { GraphMetadata } from "./graphMetadata";
+import type { GraphPropertyIdLike } from "./graphPropertyIdLike";
 import { GraphMetadataContainer } from "./graphMetadataContainer";
-import { GraphMetadata } from "./graphMetadata";
-import { Graph } from "./graph";
 import { DataType } from "./dataType";
-
-/**
- * Represents a valid value for the id of a GraphProperty.
- */
-export type GraphPropertyIdLike = string | symbol;
+import { DataTypeKey } from "./dataTypeKey";
 
 /**
  * Graph properties are used to annotate graph objects such as nodes or links.
@@ -59,3 +55,9 @@ export class GraphProperty<V = any> extends GraphMetadataContainer<V> {
         return this._dataType?.validate(value) ?? true;
     }
 }
+
+/* @internal */
+export const isGraphProperty = (value: any): value is GraphProperty => value instanceof GraphProperty;
+
+/* @internal */
+export const DATATYPE_GraphProperty = DataType._create<GraphProperty>(DataTypeKey.fromString("GraphProperty", "graphmodel"), { validate: isGraphProperty });

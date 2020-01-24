@@ -14,16 +14,18 @@
  * limitations under the License.
  */
 
+import type { GraphMetadataContainer } from "./graphMetadataContainer";
+import type { GraphMetadata } from "./graphMetadata";
+import type { GraphNode } from "./graphNode";
+import type { GraphLink } from "./graphLink";
 import { GraphSchema } from "./graphSchema";
 import { GraphObject } from "./graphObject";
-import { GraphMetadataContainer } from "./graphMetadataContainer";
-import { GraphMetadata } from "./graphMetadata";
-import { GraphNode, GraphNodeIdLike } from "./graphNode";
 import { GraphNodeCollection } from "./graphNodeCollection";
-import { GraphLink } from "./graphLink";
 import { GraphLinkCollection } from "./graphLinkCollection";
 import { GraphCommonSchema } from "./graphCommonSchema";
-import { isGraphNodeIdLike } from "./validators";
+import { GraphNodeIdLike, isGraphNodeIdLike } from "./graphNodeIdLike";
+import { DataType } from "./dataType";
+import { DataTypeKey } from "./dataTypeKey";
 
 /**
  * A directed graph consisting of nodes and links.
@@ -230,3 +232,11 @@ export class Graph extends GraphObject {
         return importedNode;
     }
 }
+
+/* @internal */
+export function isGraph(value: any): value is Graph {
+    return value instanceof Graph;
+}
+
+/* @internal */
+export const DATATYPE_Graph = DataType._create(DataTypeKey.fromString("Graph", "graphmodel"), { validate: isGraph });

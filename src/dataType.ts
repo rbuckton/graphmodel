@@ -14,141 +14,127 @@
  * limitations under the License.
  */
 
-import { GraphNode, GraphNodeIdLike } from "./graphNode";
-import { GraphLink } from "./graphLink";
-import { GraphCategory, GraphCategoryIdLike } from "./graphCategory";
-import { GraphProperty, GraphPropertyIdLike } from "./graphProperty";
-import { GraphObject } from "./graphObject";
-import { GraphMetadata } from "./graphMetadata";
-import { GraphSchema, GraphSchemaNameLike } from "./graphSchema";
-import { Graph } from "./graph";
-import { getTaggedId } from "./utils";
+import type { DataTypeNameLike } from "./dataTypeNameLike";
+import { DataTypeKey } from "./dataTypeKey";
 import * as validators from "./validators";
-
-/* @internal */
-export class DataTypeKey {
-    readonly name: DataTypeNameLike;
-    readonly packageQualifier: string;
-    readonly fullName: DataTypeNameLike;
-    readonly id: string;
-
-    private constructor(name: DataTypeNameLike, packageQualifier: string, id?: string) {
-        this.name = name;
-        this.packageQualifier = packageQualifier;
-        this.fullName =
-            typeof this.name === "symbol" ? this.name :
-            this.packageQualifier ? `${this.packageQualifier}!${this.name}` :
-            this.name;
-        this.id = id ?? getTaggedId(this.fullName);
-    }
-
-    static fromDataType(dataType: DataType) {
-        return dataType._key;
-    }
-
-    static fromSymbol(name: symbol) {
-        return new DataTypeKey(name, /*packageQualifier*/ "");
-    }
-
-    static fromString(name: string, packageQualifier?: string) {
-        if (packageQualifier !== undefined) {
-            if (name.includes("!") || name.includes("|")) {
-                throw new Error("Invalid token in argument 'name'. The '!' and '|' tokens are reserved in a package-qualified name.");
-            }
-            if (packageQualifier.includes("!") || packageQualifier.includes("|")) {
-                throw new Error("Invalid token in argument 'packageQualifier'. The '!' and '|' tokens are reserved in a package-qualified name.");
-            }
-        }
-        else {
-            const match = /^([^!|]+)!([^!|]+)$/.exec(name);
-            if (match) {
-                [, packageQualifier, name] = match;
-            }
-            if (name.includes("!")) {
-                throw new Error("Invalid token in argument 'name'. The '!' token is reserved in a package-qualified names.");
-            }
-        }
-        return new DataTypeKey(name, packageQualifier ?? "");
-    }
-
-    static fromClass(ctor: new (...args: any) => any, packageQualifier?: string) {
-        return this.fromString(ctor.name, packageQualifier);
-    }
-
-    static fromUnion(constituentTypes: readonly DataType[]) {
-        return new DataTypeKey(
-            constituentTypes.map(constituentType => constituentType.fullName.toString()).join("|"),
-            "",
-            constituentTypes.map(constituentType => DataTypeKey.fromDataType(constituentType).id).join("|"));
-    }
-
-    static from(type: DataTypeNameLike | DataType, packageQualifier?: string) {
-        return typeof type === "symbol" ? this.fromSymbol(type) :
-            typeof type === "string" ? this.fromString(type, packageQualifier) :
-            this.fromDataType(type);
-    }
-}
-
-export type DataTypeNameLike = string | symbol;
 
 export class DataType<T = any> {
     /**
      * The default DataType representing the `string` type.
      */
-    static readonly string = new DataType<string>(DataTypeKey.fromString("string"), validators.isString, /*unionTypes*/ undefined);
+    static readonly string = DataType._create<string>(DataTypeKey.fromString("string"), {
+        validate: validators.isString,
+        canConvert: value => typeof value !== "symbol",
+        convert: value => String(value)
+    });
+
     /**
      * The default DataType representing the `symbol` type.
      */
-    static readonly symbol = new DataType<symbol>(DataTypeKey.fromString("symbol"), validators.isSymbol, /*unionTypes*/ undefined);
+    static readonly symbol = DataType._create<symbol>(DataTypeKey.fromString("symbol"), {
+        validate: validators.isSymbol,
+    });
+
     /**
      * The default DataType representing the `number` type.
      */
-    static readonly number = new DataType<number>(DataTypeKey.fromString("number"), validators.isNumber, /*unionTypes*/ undefined);
+    static readonly number = DataType._create<number>(DataTypeKey.fromString("number"), {
+        validate: validators.isNumber,
+        canConvert: value => typeof value === "string" || (typeof value === "bigint" && value >= BigInt(Number.MIN_SAFE_INTEGER) && value <= BigInt(Number.MAX_SAFE_INTEGER)),
+        convert: value => Number(value),
+    });
+
     /**
      * The default DataType representing the `bigint` type.
      */
-    static readonly bigint = new DataType<bigint>(DataTypeKey.fromString("bigint"), validators.isBigInt, /*unionTypes*/ undefined);
+    static readonly bigint = DataType._create<bigint>(DataTypeKey.fromString("bigint"), {
+        validate: validators.isBigInt,
+        canConvert: value => (typeof value === "string" || typeof value === "number") && typeof BigInt === "function",
+        convert: value => BigInt(value)
+    });
+
     /**
      * The default DataType representing the `boolean` type.
      */
-    static readonly boolean = new DataType<boolean>(DataTypeKey.fromString("boolean"), validators.isBoolean, /*unionTypes*/ undefined);
+    static readonly boolean = DataType._create<boolean>(DataTypeKey.fromString("boolean"), {
+        validate: validators.isBoolean,
+        canConvert: () => true,
+        convert: value => !!value
+    });
+
     /**
      * The default DataType representing the `object` type.
      */
-    static readonly object = new DataType<object>(DataTypeKey.fromString("object"), validators.isObject, /*unionTypes*/ undefined);
+    static readonly object = DataType._create<object>(DataTypeKey.fromString("object"), {
+        validate: validators.isObject,
+        canConvert: value => value !== null && value !== undefined,
+        convert: value => Object(value)
+    });
+
     /**
      * The default DataType representing the `function` type.
      */
-    static readonly function = new DataType<Function>(DataTypeKey.fromString("function"), validators.isFunction, /*unionTypes*/ undefined);
+    static readonly function = DataType._create<Function>(DataTypeKey.fromString("function"), {
+        validate: validators.isFunction
+    });
+
     /**
      * The default DataType representing the `null` type.
      */
-    static readonly null = new DataType<null>(DataTypeKey.fromString("null"), validators.isUndefined, /*unionTypes*/ undefined);
+    static readonly null = DataType._create<null>(DataTypeKey.fromString("null"), {
+        validate: validators.isUndefined,
+        canConvert: () => true,
+        convert: () => null,
+    });
+
     /**
      * The default DataType representing the `undefined` type.
      */
-    static readonly undefined = new DataType<undefined>(DataTypeKey.fromString("undefined"), validators.isNull, /*unionTypes*/ undefined);
+    static readonly undefined = DataType._create<undefined>(DataTypeKey.fromString("undefined"), {
+        validate: validators.isUndefined,
+        canConvert: () => true,
+        convert: () => undefined,
+    });
+
     /**
      * The default DataType representing the TypeScript `unknown` type.
      */
-    static readonly unknown = new DataType<unknown>(DataTypeKey.fromString("unknown"), validators.isUnknown, /*unionTypes*/ undefined);
+    static readonly unknown = DataType._create<unknown>(DataTypeKey.fromString("unknown"), {
+        validate: validators.isUnknown,
+        canConvert: () => true,
+        convert: value => value
+    });
+
     /**
      * The default DataType representing the TypeScript `never` type.
      */
-    static readonly never = new DataType<never>(DataTypeKey.fromString("never"), validators.isNever, /*unionTypes*/ undefined);
+    static readonly never = DataType._create<never>(DataTypeKey.fromString("never"), {
+        validate: validators.isNever
+    });
+
     /**
      * The default DataType representing the TypeScript `any` type.
      */
-    static readonly any = new DataType<any>(DataTypeKey.fromString("any"), validators.isAny, /*unionTypes*/ undefined);
+    static readonly any = DataType._create<any>(DataTypeKey.fromString("any"), {
+        validate: validators.isAny,
+        canConvert: () => true,
+        convert: value => value
+    });
+
+    static readonly DataType = DataType._create<DataType>(DataTypeKey.fromString("DataType", "graphmodel"), {
+        validate: isDataType,
+    });
 
     /* @internal */ readonly _constituentTypes?: readonly DataType[];
     /* @internal */ readonly _key: DataTypeKey;
     /* @internal */ _commonSchemaType?: boolean;
     private readonly _validator?: (value: any) => boolean;
     private _canValidateCache?: boolean;
+    private readonly _canConvert?: (value: any) => boolean;
+    private readonly _convert?: (value: any) => T;
 
-    /* @internal */ static _create<T>(key: DataTypeKey, validator: ((value: any) => value is T) | ((value: any) => boolean) | undefined) {
-        return new DataType<T>(key, validator, /*unionTypes*/ undefined);
+    /* @internal */ static _create<T>(key: DataTypeKey, options: DataTypeOptions<T> | undefined) {
+        return new DataType<T>(key, options, /*constituentTypes*/ undefined);
     }
 
     /* @internal */ static _createUnion<T>(constituentTypes: readonly DataType[]) {
@@ -158,9 +144,11 @@ export class DataType<T = any> {
     /**
      * For internal use only. Instances should be created via `GraphSchema.dataTypes.getOrCreate()`.
      */
-    private constructor(key: DataTypeKey, validator: ((value: any) => value is T) | ((value: any) => boolean) | undefined, constituentTypes: readonly DataType[] | undefined) {
+    private constructor(key: DataTypeKey, options: DataTypeOptions<T> | undefined, constituentTypes: readonly DataType[] | undefined) {
         this._key = key;
-        this._validator = validator;
+        this._validator = options?.validate;
+        this._canConvert = options?.canConvert;
+        this._convert = options?.convert;
         this._constituentTypes = constituentTypes;
     }
 
@@ -269,53 +257,119 @@ export class DataType<T = any> {
         }
         return (void 0, this._validator)?.(value) ?? true;
     }
+
+    /**
+     * Tests whether the provided value can be converted into the underlying data-type value.
+     */
+    canConvert(value: any): "convertible" | "not-convertible" | "ambiguous" {
+        if (this.validate(value)) {
+            return "convertible";
+        }
+        if (this._constituentTypes !== undefined) {
+            const possibleConversions = new Set<DataType>();
+            let possiblyAmbiguous = false;
+            for (const constituentType of this._constituentTypes) {
+                if (constituentType.validate(value)) {
+                    return "convertible";
+                }
+                switch (constituentType.canConvert(value)) {
+                    case "convertible":
+                        possibleConversions.add(constituentType);
+                        break;
+                    case "ambiguous":
+                        possiblyAmbiguous = true;
+                        break;
+                }
+            }
+            if (possiblyAmbiguous) {
+                return "ambiguous";
+            }
+            possibleConversions.delete(DataType.undefined);
+            possibleConversions.delete(DataType.null);
+            const hasString = possibleConversions.delete(DataType.string);
+            const hasNumber = possibleConversions.delete(DataType.number);
+            const hasBoolean = possibleConversions.delete(DataType.boolean);
+            if (possibleConversions.size === 1) {
+                return "convertible";
+            }
+            if (possibleConversions.size > 1) {
+                return "ambiguous";
+            }
+            return hasString || hasNumber || hasBoolean ? "convertible" : "not-convertible";
+        }
+        if (this._convert !== undefined) {
+            return ((void 0, this._canConvert)?.(value) ?? true) ? "convertible" : "not-convertible";
+        }
+        return "not-convertible";
+    }
+
+    /**
+     * Converts the provided value to a value consistent with the datatype.
+     */
+    convert(value: any): T {
+        if (this.validate(value)) {
+            return value;
+        }
+        if (this._constituentTypes !== undefined) {
+            const possibleConversions = new Set<DataType>();
+            for (const constituentType of this._constituentTypes) {
+                switch (constituentType.canConvert(value)) {
+                    case "convertible":
+                        possibleConversions.add(constituentType);
+                        break;
+                    case "ambiguous":
+                        throw new Error("Conversion of value would be ambiguous");
+                }
+            }
+            possibleConversions.delete(DataType.undefined);
+            possibleConversions.delete(DataType.null);
+            const hasString = possibleConversions.delete(DataType.string);
+            const hasNumber = possibleConversions.delete(DataType.number);
+            const hasBoolean = possibleConversions.delete(DataType.boolean);
+            if (possibleConversions.size === 1) {
+                for (const constituentType of possibleConversions) {
+                    return constituentType.convert(value);
+                }
+            }
+            if (possibleConversions.size === 0) {
+                if (hasNumber) {
+                    return DataType.number.convert(value) as any as T;
+                }
+                if (hasString) {
+                    return DataType.string.convert(value) as any as T;
+                }
+                if (hasBoolean) {
+                    return DataType.boolean.convert(value) as any as T;
+                }
+            }
+            throw new Error("Conversion of value not supported");
+        }
+        else if (this._convert !== undefined && this.canConvert(value)) {
+            return (void 0, this._convert)(value);
+        }
+        throw new Error("Conversion of value not supported");
+    }
+
+    toString(): string {
+        return typeof this._key.fullName === "symbol" ?
+            this._key.fullName.toString() :
+            this._key.fullName;
+    }
 }
 
-export type TypeOfDataTypeName<N extends DataTypeNameLike, Q extends string = ""> =
-    Q extends "" ?
-        N extends "string" ? string :
-        N extends "symbol" ? symbol :
-        N extends "number" ? number :
-        N extends "bigint" ? bigint :
-        N extends "boolean" ? boolean :
-        N extends "object" ? object :
-        N extends "function" ? Function :
-        N extends "null" ? null :
-        N extends "undefined" ? undefined :
-        N extends "unknown" ? unknown :
-        N extends "never" ? never :
-        N extends "any" ? any :
-        N extends "graphmodel!GraphNode" ? GraphNode :
-        N extends "graphmodel!GraphNodeIdLike" ? GraphNodeIdLike :
-        N extends "graphmodel!GraphLink" ? GraphLink :
-        N extends "graphmodel!GraphProperty" ? GraphProperty :
-        N extends "graphmodel!GraphPropertyIdLike" ? GraphPropertyIdLike :
-        N extends "graphmodel!GraphCategory" ? GraphCategory :
-        N extends "graphmodel!GraphCategoryIdLike" ? GraphCategoryIdLike :
-        N extends "graphmodel!GraphObject" ? GraphObject :
-        N extends "graphmodel!GraphMetadata" ? GraphMetadata :
-        N extends "graphmodel!GraphSchema" ? GraphSchema :
-        N extends "graphmodel!GraphSchemaNameLike" ? GraphSchemaNameLike :
-        N extends "graphmodel!Graph" ? Graph :
-        unknown :
-    Q extends "graphmodel" ?
-        N extends "GraphNode" ? GraphNode :
-        N extends "GraphNodeIdLike" ? GraphNodeIdLike :
-        N extends "GraphLink" ? GraphLink :
-        N extends "GraphProperty" ? GraphProperty :
-        N extends "GraphPropertyIdLike" ? GraphPropertyIdLike :
-        N extends "GraphCategory" ? GraphCategory :
-        N extends "GraphCategoryIdLike" ? GraphCategoryIdLike :
-        N extends "GraphObject" ? GraphObject :
-        N extends "GraphMetadata" ? GraphMetadata :
-        N extends "GraphSchema" ? GraphSchema :
-        N extends "GraphSchemaNameLike" ? GraphSchemaNameLike :
-        N extends "Graph" ? Graph :
-        unknown :
-    unknown;
+export interface DataTypeOptions<T> {
+    validate?: ((value: any) => value is T) | ((value: any) => boolean);
+    canConvert?: (value: any) => boolean,
+    convert?: (value: any) => T;
+}
 
 function compareDataTypes(a: DataType, b: DataType) {
     const aId = DataTypeKey.fromDataType(a).id;
     const bId = DataTypeKey.fromDataType(b).id;
     return aId < bId ? -1 : aId > bId ? +1 : 0;
+}
+
+/* @internal */
+export function isDataType(value: any): value is DataType {
+    return value instanceof DataType;
 }

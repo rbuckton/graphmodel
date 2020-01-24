@@ -2,6 +2,7 @@
     "compilerOptions": {
         "target": "es2015",
         "module": "commonjs",
+        "lib": ["es2015", "ESNext.BigInt"],
         "strict": true,
         "stripInternal": true,
         "declaration": true,

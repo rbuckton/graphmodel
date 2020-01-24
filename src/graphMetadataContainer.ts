@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
+import type { Graph } from "./graph";
 import { GraphMetadata } from "./graphMetadata";
-import { Graph } from "./graph";
 
 /**
  * The base class for an object that can have associated graph metadata.

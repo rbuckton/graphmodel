@@ -14,15 +14,6 @@
  * limitations under the License.
  */
 
-import { GraphNode, GraphNodeIdLike } from "./graphNode";
-import { GraphLink } from "./graphLink";
-import { Graph } from "./graph";
-import { GraphProperty, GraphPropertyIdLike } from "./graphProperty";
-import { GraphCategory, GraphCategoryIdLike } from "./graphCategory";
-import { GraphObject } from "./graphObject";
-import { GraphMetadata } from "./graphMetadata";
-import { GraphSchema, GraphSchemaNameLike } from "./graphSchema";
-
 /* @internal */
 export const isString = (value: any): value is string => typeof value === "string";
 /* @internal */
@@ -47,27 +38,3 @@ export const isUnknown = (value: any): value is unknown => true;
 export const isNever = (value: any): value is never => false;
 /* @internal */
 export const isAny = (value: any): value is any => true;
-/* @internal */
-export const isGraphNode = (value: any): value is GraphNode => value instanceof GraphNode;
-/* @internal */
-export const isGraphLink = (value: any): value is GraphLink => value instanceof GraphLink;
-/* @internal */
-export const isGraphProperty = (value: any): value is GraphProperty => value instanceof GraphProperty;
-/* @internal */
-export const isGraphCategory = (value: any): value is GraphCategory => value instanceof GraphCategory;
-/* @internal */
-export const isGraphObject = (value: any): value is GraphObject => value instanceof GraphObject;
-/* @internal */
-export const isGraphMetadata = (value: any): value is GraphMetadata => value instanceof GraphMetadata;
-/* @internal */
-export const isGraphSchema = (value: any): value is GraphSchema => value instanceof GraphSchema;
-/* @internal */
-export const isGraph = (value: any): value is Graph => value instanceof Graph;
-/* @internal */
-export const isGraphNodeIdLike = (value: any): value is GraphNodeIdLike => isSymbol(value) || isString(value);
-/* @internal */
-export const isGraphCategoryIdLike = (value: any): value is GraphCategoryIdLike => isSymbol(value) || isString(value);
-/* @internal */
-export const isGraphPropertyIdLike = (value: any): value is GraphPropertyIdLike => isSymbol(value) || isString(value);
-/* @internal */
-export const isGraphSchemaNameLike = (value: any): value is GraphSchemaNameLike => isSymbol(value) || isString(value);

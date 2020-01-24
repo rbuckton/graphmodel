@@ -14,12 +14,14 @@
  * limitations under the License.
  */
 
-import { GraphSchema } from "./graphSchema";
+import type { GraphCategory } from "./graphCategory";
+import type { GraphNode } from "./graphNode";
+import type { GraphSchema } from "./graphSchema";
+import type { Graph } from "./graph";
+import { DataType } from "./dataType";
+import { DataTypeKey } from "./dataTypeKey";
 import { GraphCommonSchema } from "./graphCommonSchema";
-import { GraphCategory } from "./graphCategory";
 import { GraphObject } from "./graphObject";
-import { GraphNode } from "./graphNode";
-import { Graph } from "./graph";
 
 /**
  * Represents a link between two nodes in the graph.
@@ -143,3 +145,10 @@ export interface GraphLinkTraversal {
      */
     acceptLink?: (this: void, link: GraphLink) => boolean;
 }
+
+/* @internal */
+export const isGraphLink = (value: any): value is GraphLink => value instanceof GraphLink;
+
+/* @internal */
+export const DATATYPE_GraphLink = DataType._create<GraphLink>(DataTypeKey.fromString("GraphLink", "graphmodel"), { validate: isGraphLink });
+

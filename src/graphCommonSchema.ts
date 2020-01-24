@@ -14,39 +14,22 @@
  * limitations under the License.
  */
 
+import type { GraphNode } from "./graphNode";
+import type { GraphNodeIdLike } from "./graphNodeIdLike";
+import type { GraphLink } from "./graphLink";
+import type { GraphProperty } from "./graphProperty";
+import type { GraphPropertyIdLike } from "./graphPropertyIdLike";
+import type { GraphCategory } from "./graphCategory";
+import type { GraphCategoryIdLike } from "./graphCategoryIdLike";
+import type { GraphObject } from "./graphObject";
+import type { GraphSchemaNameLike } from "./graphSchemaNameLike";
+import type { Graph } from "./graph";
 import { GraphSchema } from "./graphSchema";
 import { GraphMetadata, GraphMetadataFlags } from "./graphMetadata";
 import { DataType } from "./dataType";
-import { lazy } from "./utils";
-import * as validators from "./validators";
+import { lazy, lazyInit } from "./utils";
 
 // NOTE: GraphCommonSchema depends on an unfortunate circularity on GraphSchema
-
-function lazyInit<T, K extends keyof T>(obj: T, key: K, factory: () => T[K]) {
-    let hasValue = false;
-    let value: T[K];
-    Object.defineProperty(obj, key, {
-        enumerable: true,
-        configurable: true,
-        get: () => {
-            if (hasValue) {
-                return value;
-            }
-            value = factory();
-            hasValue = true;
-            try {
-                Object.defineProperty(obj, key, {
-                    enumerable: true,
-                    configurable: true,
-                    writable: false,
-                    value
-                });
-            } catch {
-            }
-            return value;
-        }
-    });
-}
 
 export namespace GraphCommonSchema {
     export declare const Schema: GraphSchema;
@@ -65,32 +48,47 @@ export namespace GraphCommonSchema {
         export const unknown: DataType<unknown>;
         export const never: DataType<never>;
         export const any: DataType<any>;
-        export const GraphNode: DataType<import("./graphNode").GraphNode>;
-        export const GraphNodeIdLike: DataType<import("./graphNode").GraphNodeIdLike>;
-        export const GraphLink: DataType<import("./graphLink").GraphLink>;
-        export const GraphProperty: DataType<import("./graphProperty").GraphProperty>;
-        export const GraphPropertyIdLike: DataType<import("./graphProperty").GraphPropertyIdLike>;
-        export const GraphCategory: DataType<import("./graphCategory").GraphCategory>;
-        export const GraphCategoryIdLike: DataType<import("./graphCategory").GraphCategoryIdLike>;
-        export const GraphObject: DataType<import("./graphObject").GraphObject>;
-        export const GraphMetadata: DataType<import("./graphMetadata").GraphMetadata>;
-        export const GraphSchema: DataType<import("./graphSchema").GraphSchema>;
-        export const GraphSchemaNameLike: DataType<import("./graphSchema").GraphSchemaNameLike>;
-        export const Graph: DataType<import("./graph").Graph>;
+        export const DataType: DataType<DataType>;
+        export const GraphNode: DataType<GraphNode>;
+        export const GraphNodeIdLike: DataType<GraphNodeIdLike>;
+        export const GraphLink: DataType<GraphLink>;
+        export const GraphProperty: DataType<GraphProperty>;
+        export const GraphPropertyIdLike: DataType<GraphPropertyIdLike>;
+        export const GraphCategory: DataType<GraphCategory>;
+        export const GraphCategoryIdLike: DataType<GraphCategoryIdLike>;
+        export const GraphObject: DataType<GraphObject>;
+        export const GraphMetadata: DataType<GraphMetadata>;
+        export const GraphSchema: DataType<GraphSchema>;
+        export const GraphSchemaNameLike: DataType<GraphSchemaNameLike>;
+        export const Graph: DataType<Graph>;
     }
     export declare const BaseUri: import("./graphProperty").GraphProperty<string>;
     export declare const Version: import("./graphProperty").GraphProperty<number>;
-    export declare const SourceNode: import("./graphProperty").GraphProperty<import("./graphNode").GraphNode>;
-    export declare const TargetNode: import("./graphProperty").GraphProperty<import("./graphNode").GraphNode>;
+    export declare const SourceNode: import("./graphProperty").GraphProperty<GraphNode>;
+    export declare const TargetNode: import("./graphProperty").GraphProperty<GraphNode>;
     export declare const IsContainment: import("./graphProperty").GraphProperty<boolean>;
     export declare const IsPseudo: import("./graphProperty").GraphProperty<boolean>;
     export declare const IsTag: import("./graphProperty").GraphProperty<boolean>;
     export declare const Label: import("./graphProperty").GraphProperty<string>;
-    export declare const UniqueId: import("./graphProperty").GraphProperty<import("./dataType").DataTypeNameLike>;
+    export declare const UniqueId: import("./graphProperty").GraphProperty<GraphNodeIdLike>;
     export declare const Contains: import("./graphCategory").GraphCategory;
 }
 
+declare const require: any;
+
 const lazyGraphCommonSchema = lazy(() => {
+    const { DATATYPE_GraphNode } = require("./graphNode") as typeof import("./graphNode");
+    const { DATATYPE_GraphNodeIdLike } = require("./graphNodeIdLike") as typeof import("./graphNodeIdLike");
+    const { DATATYPE_GraphLink } = require("./graphLink") as typeof import("./graphLink");
+    const { DATATYPE_GraphProperty } = require("./graphProperty") as typeof import("./graphProperty");
+    const { DATATYPE_GraphPropertyIdLike } = require("./graphPropertyIdLike") as typeof import("./graphPropertyIdLike");
+    const { DATATYPE_GraphCategory } = require("./graphCategory") as typeof import("./graphCategory");
+    const { DATATYPE_GraphCategoryIdLike } = require("./graphCategoryIdLike") as typeof import("./graphCategoryIdLike");
+    const { DATATYPE_GraphObject } = require("./graphObject") as typeof import("./graphObject");
+    const { DATATYPE_GraphMetadata } = require("./graphMetadata") as typeof import("./graphMetadata");
+    const { DATATYPE_GraphSchema } = require("./graphSchema") as typeof import("./graphSchema");
+    const { DATATYPE_GraphSchemaNameLike } = require("./graphSchemaNameLike") as typeof import("./graphSchemaNameLike");
+    const { DATATYPE_Graph } = require("./graph") as typeof import("./graph");
     const Schema = new GraphSchema("GraphCommonSchema.Schema");
     const DataTypes = {
         string: addSchemaType(DataType.string),
@@ -105,28 +103,29 @@ const lazyGraphCommonSchema = lazy(() => {
         unknown: addSchemaType(DataType.unknown),
         never: addSchemaType(DataType.never),
         any: addSchemaType(DataType.any),
-        GraphNode: getOrCreateSchemaType("graphModel!GraphNode", validators.isGraphNode),
-        GraphNodeIdLike: getOrCreateSchemaType("graphModel!GraphNodeIdLike", validators.isGraphNodeIdLike),
-        GraphLink: getOrCreateSchemaType("graphModel!GraphLink", validators.isGraphLink),
-        GraphProperty: getOrCreateSchemaType("graphModel!GraphProperty", validators.isGraphProperty),
-        GraphPropertyIdLike: getOrCreateSchemaType("graphModel!GraphPropertyIdLike", validators.isGraphPropertyIdLike),
-        GraphCategory: getOrCreateSchemaType("graphModel!GraphCategory", validators.isGraphCategory),
-        GraphCategoryIdLike: getOrCreateSchemaType("graphModel!GraphCategoryIdLike", validators.isGraphCategoryIdLike),
-        GraphObject: getOrCreateSchemaType("graphModel!GraphObject", validators.isGraphObject),
-        GraphMetadata: getOrCreateSchemaType("graphModel!GraphMetadata", validators.isGraphMetadata),
-        GraphSchema: getOrCreateSchemaType("graphModel!GraphSchema", validators.isGraphSchema),
-        GraphSchemaNameLike: getOrCreateSchemaType("graphModel!GraphSchemaNameLike", validators.isGraphSchemaNameLike),
-        Graph: getOrCreateSchemaType("graphModel!Graph", validators.isGraph),
+        DataType: addSchemaType(DataType.DataType),
+        GraphNode: addSchemaType(DATATYPE_GraphNode),
+        GraphNodeIdLike: addSchemaType(DATATYPE_GraphNodeIdLike),
+        GraphLink: addSchemaType(DATATYPE_GraphLink),
+        GraphProperty: addSchemaType(DATATYPE_GraphProperty),
+        GraphPropertyIdLike: addSchemaType(DATATYPE_GraphPropertyIdLike),
+        GraphCategory: addSchemaType(DATATYPE_GraphCategory),
+        GraphCategoryIdLike: addSchemaType(DATATYPE_GraphCategoryIdLike),
+        GraphObject: addSchemaType(DATATYPE_GraphObject),
+        GraphMetadata: addSchemaType(DATATYPE_GraphMetadata),
+        GraphSchema: addSchemaType(DATATYPE_GraphSchema),
+        GraphSchemaNameLike: addSchemaType(DATATYPE_GraphSchemaNameLike),
+        Graph: addSchemaType(DATATYPE_Graph),
     };
-    const BaseUri = Schema.properties.getOrCreate("BaseUri", DataTypes.string, () => new GraphMetadata({ flags: GraphMetadataFlags.Removable }));
-    const Version = Schema.properties.getOrCreate("Version", DataTypes.number, () => new GraphMetadata({ flags: GraphMetadataFlags.Removable }));
-    const SourceNode = Schema.properties.getOrCreate("SourceNode", DataTypes.GraphNode, () => new GraphMetadata({ flags: GraphMetadataFlags.Immutable }));
-    const TargetNode = Schema.properties.getOrCreate("TargetNode", DataTypes.GraphNode, () => new GraphMetadata({ flags: GraphMetadataFlags.Immutable }));
-    const IsContainment = Schema.properties.getOrCreate("IsContainment", DataTypes.boolean, () => new GraphMetadata({ defaultValue: false }));
-    const IsPseudo = Schema.properties.getOrCreate("IsPseudo", DataTypes.boolean, () => new GraphMetadata({ defaultValue: false, flags: GraphMetadataFlags.Removable | GraphMetadataFlags.Serializable | GraphMetadataFlags.Sharable }));
-    const IsTag = Schema.properties.getOrCreate("IsTag", DataTypes.boolean, () => new GraphMetadata({ defaultValue: false }));
-    const Label = Schema.properties.getOrCreate("Label", DataTypes.string, () => new GraphMetadata());
-    const UniqueId = Schema.properties.getOrCreate("UniqueId", DataTypes.GraphNodeIdLike, () => new GraphMetadata({ flags: GraphMetadataFlags.Immutable }));
+    const BaseUri = Schema.properties.getOrCreate("BaseUri", DataType.string, () => new GraphMetadata({ flags: GraphMetadataFlags.Removable }));
+    const Version = Schema.properties.getOrCreate("Version", DataType.number, () => new GraphMetadata({ flags: GraphMetadataFlags.Removable }));
+    const SourceNode = Schema.properties.getOrCreate("SourceNode", DATATYPE_GraphNode, () => new GraphMetadata({ flags: GraphMetadataFlags.Immutable }));
+    const TargetNode = Schema.properties.getOrCreate("TargetNode", DATATYPE_GraphNode, () => new GraphMetadata({ flags: GraphMetadataFlags.Immutable }));
+    const IsContainment = Schema.properties.getOrCreate("IsContainment", DataType.boolean, () => new GraphMetadata({ defaultValue: false }));
+    const IsPseudo = Schema.properties.getOrCreate("IsPseudo", DataType.boolean, () => new GraphMetadata({ defaultValue: false, flags: GraphMetadataFlags.Removable | GraphMetadataFlags.Serializable | GraphMetadataFlags.Sharable }));
+    const IsTag = Schema.properties.getOrCreate("IsTag", DataType.boolean, () => new GraphMetadata({ defaultValue: false }));
+    const Label = Schema.properties.getOrCreate("Label", DataType.string, () => new GraphMetadata());
+    const UniqueId = Schema.properties.getOrCreate("UniqueId", DATATYPE_GraphNodeIdLike, () => new GraphMetadata({ flags: GraphMetadataFlags.Immutable }));
     const Contains = Schema.categories.getOrCreate("Contains", () => new GraphMetadata({ properties: [[IsContainment, true]] }));
     return {
         Schema,
@@ -145,12 +144,6 @@ const lazyGraphCommonSchema = lazy(() => {
 
     function addSchemaType<T>(dataType: DataType<T>): DataType<T> {
         Schema.dataTypes.add(dataType);
-        dataType._commonSchemaType = true;
-        return dataType;
-    }
-
-    function getOrCreateSchemaType<T>(name: string, validator: (value: any) => value is T): DataType<T> {
-        const dataType = Schema.dataTypes.getOrCreate(name, /*packageQualifier*/ undefined, validator);
         dataType._commonSchemaType = true;
         return dataType;
     }
