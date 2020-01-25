@@ -26,6 +26,9 @@ import { EventEmitter, EventSubscription } from "./events";
 import { GraphCategoryIdLike, isGraphCategoryIdLike } from "./graphCategoryIdLike";
 import { GraphPropertyIdLike, isGraphPropertyIdLike } from "./graphPropertyIdLike";
 import { isIterableObject, getCategorySet } from "./utils";
+import { requireLazy } from "./requireLazy";
+
+const lazyGraphCommonSchema = requireLazy("./graphCommonSchema");
 
 /**
  * The base definition of an extensible graph object.
@@ -56,10 +59,11 @@ export abstract class GraphObject {
     }
 
     public get isPseudo(): boolean {
-        return this.get(GraphCommonSchema.IsPseudo) ?? false;
+        return this.get(lazyGraphCommonSchema().GraphCommonSchema.IsPseudo) ?? false;
     }
+
     public set isPseudo(value: boolean) {
-        this.set(GraphCommonSchema.IsPseudo, value || undefined);
+        this.set(lazyGraphCommonSchema().GraphCommonSchema.IsPseudo, value || undefined);
     }
 
     /**
@@ -480,5 +484,3 @@ export const isGraphObject = (value: any): value is GraphObject => value instanc
 
 /* @internal */
 export const DATATYPE_GraphObject = DataType._create<GraphObject>(DataTypeKey.fromString("GraphObject", "graphmodel"), { validate: isGraphObject });
-
-import { GraphCommonSchema } from "./graphCommonSchema";

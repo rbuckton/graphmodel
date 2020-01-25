@@ -18,7 +18,6 @@ import type { GraphSchema } from "./graphSchema";
 import type { GraphCategory } from "./graphCategory";
 import type { Graph } from "./graph";
 import type { GraphCategoryIdLike } from "./graphCategoryIdLike";
-import { GraphCommonSchema } from "./graphCommonSchema";
 import { GraphObject } from "./graphObject";
 import { GraphLink } from "./graphLink";
 import { ChangeTrackedSet } from "./changeTrackedSet";
@@ -26,6 +25,9 @@ import { GraphNodeIdLike, isGraphNodeIdLike } from "./graphNodeIdLike";
 import { DataType } from "./dataType";
 import { DataTypeKey } from "./dataTypeKey";
 import { hasCategoryInSetExact, getCategorySet } from "./utils";
+import { requireLazy } from "./requireLazy";
+
+const lazyGraphCommonSchema = requireLazy("./graphCommonSchema");
 
 /**
  * Represents a node in the directed graph.
@@ -42,7 +44,7 @@ export class GraphNode extends GraphObject {
     private constructor(owner: Graph, id: GraphNodeIdLike, category?: GraphCategory) {
         super(owner, category);
         this._id = id;
-        this.set(GraphCommonSchema.UniqueId, id);
+        this.set(lazyGraphCommonSchema().GraphCommonSchema.UniqueId, id);
     }
 
     /**
@@ -98,11 +100,11 @@ export class GraphNode extends GraphObject {
      * Gets or sets a descriptive label to associate with this node.
      */
     public get label() {
-        return this.get(GraphCommonSchema.Label);
+        return this.get(lazyGraphCommonSchema().GraphCommonSchema.Label);
     }
 
     public set label(label: string | undefined) {
-        this.set(GraphCommonSchema.Label, label);
+        this.set(lazyGraphCommonSchema().GraphCommonSchema.Label, label);
     }
 
     /**

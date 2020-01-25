@@ -22,10 +22,12 @@ import { GraphSchema } from "./graphSchema";
 import { GraphObject } from "./graphObject";
 import { GraphNodeCollection } from "./graphNodeCollection";
 import { GraphLinkCollection } from "./graphLinkCollection";
-import { GraphCommonSchema } from "./graphCommonSchema";
 import { GraphNodeIdLike, isGraphNodeIdLike } from "./graphNodeIdLike";
 import { DataType } from "./dataType";
 import { DataTypeKey } from "./dataTypeKey";
+import { requireLazy } from "./requireLazy";
+
+const lazyGraphCommonSchema = requireLazy("./graphCommonSchema");
 
 /**
  * A directed graph consisting of nodes and links.
@@ -52,7 +54,7 @@ export class Graph extends GraphObject {
      */
     public get schema(): GraphSchema {
         return this._schema
-            ?? (this._schema = new GraphSchema("#document", this).addSchema(GraphCommonSchema.Schema));
+            ?? (this._schema = new GraphSchema("#document", this).addSchema(lazyGraphCommonSchema().GraphCommonSchema.Schema));
     }
 
     /**

@@ -28,8 +28,21 @@ import { GraphSchema } from "./graphSchema";
 import { GraphMetadata, GraphMetadataFlags } from "./graphMetadata";
 import { DataType } from "./dataType";
 import { lazy, lazyInit } from "./utils";
+import { requireLazy } from "./requireLazy";
 
-// NOTE: GraphCommonSchema depends on an unfortunate circularity on GraphSchema
+// NOTE: work around circular references
+const lazyGraphNode = requireLazy("./graphNode");
+const lazyGraphNodeIdLike = requireLazy("./graphNodeIdLike");
+const lazyGraphLink = requireLazy("./graphLink");
+const lazyGraphProperty = requireLazy("./graphProperty");
+const lazyGraphPropertyIdLike = requireLazy("./graphPropertyIdLike");
+const lazyGraphCategory = requireLazy("./graphCategory");
+const lazyGraphCategoryIdLike = requireLazy("./graphCategoryIdLike");
+const lazyGraphObject = requireLazy("./graphObject");
+const lazyGraphMetadata = requireLazy("./graphMetadata");
+const lazyGraphSchema = requireLazy("./graphSchema");
+const lazyGraphSchemaNameLike = requireLazy("./graphSchemaNameLike");
+const lazyGraph = requireLazy("./graph");
 
 export namespace GraphCommonSchema {
     export declare const Schema: GraphSchema;
@@ -74,21 +87,19 @@ export namespace GraphCommonSchema {
     export declare const Contains: import("./graphCategory").GraphCategory;
 }
 
-declare const require: any;
-
 const lazyGraphCommonSchema = lazy(() => {
-    const { DATATYPE_GraphNode } = require("./graphNode") as typeof import("./graphNode");
-    const { DATATYPE_GraphNodeIdLike } = require("./graphNodeIdLike") as typeof import("./graphNodeIdLike");
-    const { DATATYPE_GraphLink } = require("./graphLink") as typeof import("./graphLink");
-    const { DATATYPE_GraphProperty } = require("./graphProperty") as typeof import("./graphProperty");
-    const { DATATYPE_GraphPropertyIdLike } = require("./graphPropertyIdLike") as typeof import("./graphPropertyIdLike");
-    const { DATATYPE_GraphCategory } = require("./graphCategory") as typeof import("./graphCategory");
-    const { DATATYPE_GraphCategoryIdLike } = require("./graphCategoryIdLike") as typeof import("./graphCategoryIdLike");
-    const { DATATYPE_GraphObject } = require("./graphObject") as typeof import("./graphObject");
-    const { DATATYPE_GraphMetadata } = require("./graphMetadata") as typeof import("./graphMetadata");
-    const { DATATYPE_GraphSchema } = require("./graphSchema") as typeof import("./graphSchema");
-    const { DATATYPE_GraphSchemaNameLike } = require("./graphSchemaNameLike") as typeof import("./graphSchemaNameLike");
-    const { DATATYPE_Graph } = require("./graph") as typeof import("./graph");
+    const { DATATYPE_GraphNode } = lazyGraphNode();
+    const { DATATYPE_GraphNodeIdLike } = lazyGraphNodeIdLike();
+    const { DATATYPE_GraphLink } = lazyGraphLink();
+    const { DATATYPE_GraphProperty } = lazyGraphProperty();
+    const { DATATYPE_GraphPropertyIdLike } = lazyGraphPropertyIdLike();
+    const { DATATYPE_GraphCategory } = lazyGraphCategory();
+    const { DATATYPE_GraphCategoryIdLike } = lazyGraphCategoryIdLike();
+    const { DATATYPE_GraphObject } = lazyGraphObject();
+    const { DATATYPE_GraphMetadata } = lazyGraphMetadata();
+    const { DATATYPE_GraphSchema } = lazyGraphSchema();
+    const { DATATYPE_GraphSchemaNameLike } = lazyGraphSchemaNameLike();
+    const { DATATYPE_Graph } = lazyGraph();
     const Schema = new GraphSchema("GraphCommonSchema.Schema");
     const DataTypes = {
         string: addSchemaType(DataType.string),

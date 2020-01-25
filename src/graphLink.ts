@@ -20,8 +20,10 @@ import type { GraphSchema } from "./graphSchema";
 import type { Graph } from "./graph";
 import { DataType } from "./dataType";
 import { DataTypeKey } from "./dataTypeKey";
-import { GraphCommonSchema } from "./graphCommonSchema";
 import { GraphObject } from "./graphObject";
+import { requireLazy } from "./requireLazy";
+
+const lazyGraphCommonSchema = requireLazy("./graphCommonSchema");
 
 /**
  * Represents a link between two nodes in the graph.
@@ -41,8 +43,8 @@ export class GraphLink extends GraphObject {
         this._target = this.owner.importNode(target);
         this._index = index;
 
-        this.set(GraphCommonSchema.SourceNode, source);
-        this.set(GraphCommonSchema.TargetNode, target);
+        this.set(lazyGraphCommonSchema().GraphCommonSchema.SourceNode, source);
+        this.set(lazyGraphCommonSchema().GraphCommonSchema.TargetNode, target);
 
         source._addLink(this);
         target._addLink(this);
@@ -87,18 +89,18 @@ export class GraphLink extends GraphObject {
      * Gets a value indicating whether this is a containment link.
      */
     public get isContainment(): boolean {
-        return this.get(GraphCommonSchema.IsContainment) ?? false;
+        return this.get(lazyGraphCommonSchema().GraphCommonSchema.IsContainment) ?? false;
     }
 
     /**
      * Gets or sets a descriptive label to associate with this link.
      */
     public get label() {
-        return this.get(GraphCommonSchema.Label);
+        return this.get(lazyGraphCommonSchema().GraphCommonSchema.Label);
     }
 
     public set label(label: string | undefined) {
-        this.set(GraphCommonSchema.Label, label);
+        this.set(lazyGraphCommonSchema().GraphCommonSchema.Label, label);
     }
 
     /**
